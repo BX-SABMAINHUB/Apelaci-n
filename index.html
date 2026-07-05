@@ -1171,7 +1171,8 @@
             async function loadFilteredTickets(filterUserId) {
                 ticketsListContainer.innerHTML = '<p class="empty-state">Cargando tickets...</p>';
                 try {
-                    const snap = await db.ref('tickets').orderByChild('ticketNumber').once('value');
+                    // Se eliminó orderByChild para evitar requerir índice en Firebase
+                    const snap = await db.ref('tickets').once('value');
                     if (!snap.exists()) {
                         ticketsListContainer.innerHTML =
                             '<p class="empty-state">No hay tickets aún.</p>';
@@ -1184,6 +1185,7 @@
                             tickets.push(t);
                         }
                     });
+                    // Ordenar manualmente por número de ticket descendente
                     tickets.sort((a, b) => b.ticketNumber - a.ticketNumber);
 
                     if (tickets.length === 0) {
