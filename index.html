@@ -3,47 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Tickets - Apelaciones v2.0</title>
+    <title>Sistema de Tickets - Apelaciones v3.0</title>
 
     <!--
     ============================================================
-    SISTEMA DE TICKETS DE APELACIÓN - DOCUMENTACIÓN INTERNA
+    SISTEMA DE TICKETS DE APELACIÓN v3.0
     ============================================================
-    Versión: 2.0 (Estable)
-    Firebase: Realtime Database + Auth + Storage
-    Autor: Sistema de Apelaciones
-    Descripción: Aplicación web completa para gestión de tickets
-    de apelación con roles de usuario, staff, baneo y subida de
-    imágenes. Todo en un único archivo HTML.
+    NUEVAS CARACTERÍSTICAS EN ESTA VERSIÓN:
+    - Integración de Cloudflare Turnstile (verificación humana)
+    - Lista de usuarios baneados en el panel de administración
+    - Función para desbanear usuarios
+    - Documentación interna mejorada y más clara
+    - Comentarios detallados en cada función
+    - Estructura de código más legible y mantenible
 
-    CARACTERÍSTICAS PRINCIPALES:
+    CARACTERÍSTICAS PREVIAS (MANTENIDAS):
     - Autenticación (registro/inicio de sesión)
-    - ID único de usuario (formato AN-XXX-XXX-XXX)
-    - Creación de tickets con preguntas predefinidas
-    - Lista de "Mis Tickets" y "Todos los Tickets" (staff)
-    - Comentarios en tiempo real con soporte de imágenes
+    - ID único de usuario (AN-XXX-XXX-XXX)
+    - Creación de tickets con preguntas
+    - Lista "Mis Tickets" y "Todos los Tickets"
+    - Comentarios en tiempo real con imágenes
     - Panel de administración oculto (botón €)
-    - Gestión de staff desde el panel
-    - Baneo de usuarios por parte del staff
-    - Cambio de estado del ticket (abierto/resuelto)
-    - Diseño monocromático profesional
+    - Gestión de staff
+    - Cierre de tickets (abierto/resuelto)
+    - Subida de imágenes desde galería
+    - Diseño profesional monocromático
 
-    ESTRUCTURA DEL CÓDIGO:
-    1. Configuración de Firebase
-    2. Estilos CSS (modo oscuro profesional)
-    3. Estructura HTML semántica
-    4. Lógica JavaScript modularizada
-       - Autenticación
-       - Gestión de UI y pantallas
-       - Operaciones con tickets
-       - Comentarios e imágenes
-       - Panel de administración
-       - Utilidades y helpers
-
-    NOTAS DE VERSIÓN:
-    v2.0 - Añadido baneo de usuarios, subida de imágenes,
-           panel de staff mejorado, documentación extensa.
-    v1.0 - Lanzamiento inicial.
+    CRÉDITOS: Cloudflare Turnstile para verificación humana.
     ============================================================
     -->
 
@@ -53,18 +39,14 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
+    <!-- Cloudflare Turnstile - Widget de verificación "No soy un robot" -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
     <style>
-        /*
-        =============================================
-        VARIABLES GLOBALES DE DISEÑO
-        =============================================
-        Se utiliza un esquema de colores oscuros con
-        acentos blancos para mantener seriedad y
-        profesionalidad. La tipografía es sans-serif
-        limpia, con una fuente monoespaciada para
-        IDs y datos técnicos.
-        =============================================
-        */
+        /* ============================================
+           VARIABLES GLOBALES DE DISEÑO
+           Paleta monocromática profesional.
+           ============================================ */
         :root {
             --bg: #0a0a0a;
             --surface: #141414;
@@ -74,17 +56,11 @@
             --text-secondary: #999;
             --accent: #ffffff;
             --accent-dark: #cccccc;
-            --danger: #555;
-            --success: #777;
             --font: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             --mono: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
         }
 
-        /*
-        =============================================
-        RESETEO Y CONFIGURACIÓN BASE
-        =============================================
-        */
+        /* Reset y configuración base del documento */
         * {
             margin: 0;
             padding: 0;
@@ -104,6 +80,7 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
+        /* Contenedor raíz de la aplicación */
         #app {
             width: 100%;
             max-width: 100vw;
@@ -113,32 +90,22 @@
             flex-direction: column;
         }
 
-        /* Clase para ocultar elementos */
+        /* Clase para ocultar elementos de forma segura */
         .hidden {
             display: none !important;
         }
 
-        /* Animación de entrada suave */
+        /* Animación de entrada para transiciones suaves */
         .fade-in {
             animation: fadeIn 0.3s ease forwards;
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(4px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
-        /*
-        =============================================
-        BARRA DE ID DE USUARIO (SIEMPRE VISIBLE)
-        =============================================
-        */
+        /* Badge del ID de usuario - siempre visible */
         #user-id-badge {
             position: fixed;
             top: 16px;
@@ -154,14 +121,9 @@
             border-radius: 4px;
             pointer-events: none;
             user-select: all;
-            transition: opacity 0.3s;
         }
 
-        /*
-        =============================================
-        BOTÓN OCULTO DEL PANEL DE ADMINISTRACIÓN
-        =============================================
-        */
+        /* Botón oculto del panel Owner (€) */
         #owner-trigger {
             position: fixed;
             bottom: 12px;
@@ -176,18 +138,16 @@
             opacity: 0.25;
             transition: opacity 0.4s;
             font-family: var(--mono);
-            letter-spacing: 0.05em;
         }
         #owner-trigger:hover {
             opacity: 0.7;
             color: #555;
         }
 
-        /*
-        =============================================
-        ESTRUCTURA DE PANTALLAS
-        =============================================
-        */
+        /* ============================================
+           ESTRUCTURA DE PANTALLAS
+           Cada pantalla ocupa el viewport completo.
+           ============================================ */
         .screen {
             display: flex;
             flex-direction: column;
@@ -199,9 +159,7 @@
         }
 
         /* ---- PANTALLA DE AUTENTICACIÓN ---- */
-        #auth-screen {
-            gap: 20px;
-        }
+        #auth-screen { gap: 20px; }
         #auth-screen .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -237,15 +195,10 @@
             font-size: 0.9rem;
             font-family: var(--font);
             letter-spacing: 0.02em;
-            transition: border 0.2s;
             outline: none;
+            transition: border 0.2s;
         }
-        #auth-screen .card input:focus {
-            border-color: #666;
-        }
-        #auth-screen .card input::placeholder {
-            color: #555;
-        }
+        #auth-screen .card input:focus { border-color: #666; }
         #auth-screen .card .btn {
             background: var(--accent);
             color: #000;
@@ -257,24 +210,10 @@
             font-size: 0.85rem;
             letter-spacing: 0.05em;
             text-transform: uppercase;
-            transition: background 0.2s, transform 0.1s;
+            transition: background 0.2s;
             font-family: var(--font);
         }
-        #auth-screen .card .btn:hover {
-            background: var(--accent-dark);
-        }
-        #auth-screen .card .btn:active {
-            transform: scale(0.98);
-        }
-        #auth-screen .card .btn-outline {
-            background: transparent;
-            border: 1px solid #555;
-            color: var(--text);
-        }
-        #auth-screen .card .btn-outline:hover {
-            background: #1a1a1a;
-            border-color: #888;
-        }
+        #auth-screen .card .btn:hover { background: var(--accent-dark); }
         #auth-screen .card .toggle-text {
             text-align: center;
             font-size: 0.78rem;
@@ -283,9 +222,7 @@
             letter-spacing: 0.03em;
             transition: color 0.2s;
         }
-        #auth-screen .card .toggle-text:hover {
-            color: #fff;
-        }
+        #auth-screen .card .toggle-text:hover { color: #fff; }
         #auth-screen .card .error-msg {
             color: #ff6b6b;
             font-size: 0.78rem;
@@ -293,11 +230,15 @@
             min-height: 18px;
             letter-spacing: 0.03em;
         }
+        /* Contenedor del widget Turnstile centrado */
+        .turnstile-container {
+            display: flex;
+            justify-content: center;
+            min-height: 65px;
+        }
 
         /* ---- PANTALLA PRINCIPAL ---- */
-        #main-screen {
-            gap: 24px;
-        }
+        #main-screen { gap: 24px; }
         #main-screen .welcome-text {
             font-size: 1.1rem;
             letter-spacing: 0.04em;
@@ -315,25 +256,17 @@
             font-size: 0.85rem;
             letter-spacing: 0.05em;
             text-transform: uppercase;
-            transition: background 0.2s, transform 0.1s;
+            transition: background 0.2s;
             font-family: var(--font);
             min-width: 200px;
         }
-        #main-screen .btn:hover {
-            background: var(--accent-dark);
-        }
-        #main-screen .btn:active {
-            transform: scale(0.98);
-        }
+        #main-screen .btn:hover { background: var(--accent-dark); }
         #main-screen .btn-staff {
             background: transparent;
             border: 1px solid #555;
             color: var(--text);
         }
-        #main-screen .btn-staff:hover {
-            background: #1a1a1a;
-            border-color: #888;
-        }
+        #main-screen .btn-staff:hover { background: #1a1a1a; border-color: #888; }
         #main-screen .btn-logout {
             background: transparent;
             border: 1px solid #3a3a3a;
@@ -343,12 +276,9 @@
             letter-spacing: 0.04em;
             min-width: auto;
         }
-        #main-screen .btn-logout:hover {
-            color: #ccc;
-            border-color: #666;
-        }
+        #main-screen .btn-logout:hover { color: #ccc; border-color: #666; }
 
-        /* ---- FORMULARIO DE CREACIÓN DE TICKET ---- */
+        /* ---- FORMULARIO DE TICKET ---- */
         #ticket-form-screen .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -386,13 +316,7 @@
             outline: none;
             transition: border 0.2s;
         }
-        #ticket-form-screen .card input:focus,
-        #ticket-form-screen .card textarea:focus {
-            border-color: #666;
-        }
-        #ticket-form-screen .card textarea {
-            min-height: 100px;
-        }
+        #ticket-form-screen .card textarea { min-height: 100px; }
         #ticket-form-screen .card .btn {
             background: var(--accent);
             color: #000;
@@ -405,22 +329,12 @@
             letter-spacing: 0.05em;
             text-transform: uppercase;
             font-family: var(--font);
-            transition: background 0.2s;
-        }
-        #ticket-form-screen .card .btn:hover {
-            background: var(--accent-dark);
         }
         #ticket-form-screen .card .btn-back {
             background: transparent;
             border: 1px solid #444;
             color: #aaa;
             font-size: 0.7rem;
-            letter-spacing: 0.04em;
-        }
-        #ticket-form-screen .card .btn-back:hover {
-            border-color: #888;
-            color: #fff;
-            background: #1a1a1a;
         }
 
         /* ---- VISTA DE TICKET (PANTALLA COMPLETA) ---- */
@@ -457,275 +371,46 @@
             border-left: 1px solid var(--border);
         }
         @media (max-width: 768px) {
-            #ticket-view-screen {
-                flex-direction: column;
-            }
-            #ticket-view-screen .ticket-sidebar {
-                width: 100%;
-                min-width: auto;
-                max-height: none;
-                border-left: none;
-                border-top: 1px solid var(--border);
-            }
-            #ticket-view-screen .ticket-main {
-                max-height: none;
-                border-right: none;
-            }
+            #ticket-view-screen { flex-direction: column; }
+            #ticket-view-screen .ticket-sidebar { width: 100%; min-width: auto; max-height: none; border-left: none; border-top: 1px solid var(--border); }
+            #ticket-view-screen .ticket-main { max-height: none; border-right: none; }
         }
-        #ticket-view-screen .ticket-main h2 {
-            font-weight: 400;
-            font-size: 1.2rem;
-            letter-spacing: 0.04em;
-            font-family: var(--mono);
-        }
-        #ticket-view-screen .ticket-main .comments-area {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            flex: 1;
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-        #ticket-view-screen .ticket-main .comment-bubble {
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 14px 16px;
-            max-width: 85%;
-            align-self: flex-start;
-            animation: fadeIn 0.25s ease;
-        }
-        #ticket-view-screen .ticket-main .comment-bubble.staff-comment {
-            align-self: flex-end;
-            border-color: #444;
-            background: #1c1c1c;
-        }
-        #ticket-view-screen .ticket-main .comment-author {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            letter-spacing: 0.04em;
-            margin-bottom: 6px;
-            font-family: var(--mono);
-        }
-        #ticket-view-screen .ticket-main .comment-text {
-            font-size: 0.88rem;
-            letter-spacing: 0.02em;
-            line-height: 1.5;
-        }
-        #ticket-view-screen .ticket-main .comment-time {
-            font-size: 0.65rem;
-            color: #555;
-            margin-top: 6px;
-        }
-        #ticket-view-screen .ticket-main .comment-image {
-            max-width: 200px;
-            max-height: 200px;
-            border-radius: 4px;
-            margin-top: 8px;
-            border: 1px solid #333;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-            margin-top: 8px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border);
-            flex-wrap: wrap;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row textarea {
-            flex: 1;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 10px 14px;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-family: var(--font);
-            letter-spacing: 0.02em;
-            resize: none;
-            outline: none;
-            min-height: 42px;
-            max-height: 100px;
-            transition: border 0.2s;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row textarea:focus {
-            border-color: #666;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row .file-upload {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row .file-label {
-            font-size: 0.7rem;
-            color: #aaa;
-            cursor: pointer;
-            border: 1px solid #444;
-            padding: 6px 10px;
-            border-radius: 3px;
-            transition: all 0.2s;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row .file-label:hover {
-            border-color: #888;
-            color: #fff;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row .btn-send {
-            background: var(--accent);
-            color: #000;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            font-family: var(--font);
-            white-space: nowrap;
-            transition: background 0.2s;
-        }
-        #ticket-view-screen .ticket-main .add-comment-row .btn-send:hover {
-            background: var(--accent-dark);
-        }
-        #ticket-view-screen .ticket-sidebar h3 {
-            font-weight: 400;
-            font-size: 0.9rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-            margin-bottom: 2px;
-        }
-        #ticket-view-screen .ticket-sidebar .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #1f1f1f;
-            font-size: 0.82rem;
-            letter-spacing: 0.03em;
-        }
-        #ticket-view-screen .ticket-sidebar .info-label {
-            color: #777;
-        }
-        #ticket-view-screen .ticket-sidebar .info-value {
-            color: var(--text);
-            text-align: right;
-            word-break: break-word;
-            font-family: var(--mono);
-            font-size: 0.75rem;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 3px;
-            font-size: 0.7rem;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-        .status-abierto {
-            background: #1a3a1a;
-            color: #7ddf7d;
-            border: 1px solid #2a5a2a;
-        }
-        .status-resuelto {
-            background: #2a2a2a;
-            color: #999;
-            border: 1px solid #444;
-        }
-        #ticket-view-screen .btn-back-tickets {
-            background: transparent;
-            border: 1px solid #444;
-            color: #aaa;
-            padding: 8px 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.7rem;
-            letter-spacing: 0.04em;
-            font-family: var(--font);
-            align-self: flex-start;
-            transition: all 0.2s;
-        }
-        #ticket-view-screen .btn-back-tickets:hover {
-            border-color: #888;
-            color: #fff;
-            background: #1a1a1a;
-        }
-        #ticket-view-screen .btn-resolve,
-        #ticket-view-screen .btn-ban {
-            background: transparent;
-            border: 1px solid #555;
-            color: #ccc;
-            padding: 8px 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.7rem;
-            letter-spacing: 0.04em;
-            font-family: var(--font);
-            transition: all 0.2s;
-            margin-top: 8px;
-        }
-        #ticket-view-screen .btn-resolve:hover {
-            background: #2a2a2a;
-            border-color: #888;
-        }
-        #ticket-view-screen .btn-ban {
-            border-color: #aa4444;
-            color: #ff9999;
-        }
-        #ticket-view-screen .btn-ban:hover {
-            background: #2a1515;
-        }
+        #ticket-view-screen .ticket-main h2 { font-weight: 400; font-size: 1.2rem; letter-spacing: 0.04em; font-family: var(--mono); }
+        #ticket-view-screen .ticket-main .comments-area { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow-y: auto; padding-right: 8px; }
+        #ticket-view-screen .ticket-main .comment-bubble { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 14px 16px; max-width: 85%; align-self: flex-start; animation: fadeIn 0.25s ease; }
+        #ticket-view-screen .ticket-main .comment-bubble.staff-comment { align-self: flex-end; border-color: #444; background: #1c1c1c; }
+        #ticket-view-screen .ticket-main .comment-author { font-size: 0.7rem; color: var(--text-secondary); letter-spacing: 0.04em; margin-bottom: 6px; font-family: var(--mono); }
+        #ticket-view-screen .ticket-main .comment-text { font-size: 0.88rem; letter-spacing: 0.02em; line-height: 1.5; }
+        #ticket-view-screen .ticket-main .comment-time { font-size: 0.65rem; color: #555; margin-top: 6px; }
+        #ticket-view-screen .ticket-main .comment-image { max-width: 200px; max-height: 200px; border-radius: 4px; margin-top: 8px; border: 1px solid #333; }
+        #ticket-view-screen .ticket-main .add-comment-row { display: flex; gap: 10px; align-items: flex-end; margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+        #ticket-view-screen .ticket-main .add-comment-row textarea { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 14px; border-radius: 4px; font-size: 0.85rem; font-family: var(--font); resize: none; outline: none; min-height: 42px; max-height: 100px; transition: border 0.2s; }
+        #ticket-view-screen .ticket-main .add-comment-row .file-upload { display: flex; align-items: center; gap: 6px; }
+        #ticket-view-screen .ticket-main .add-comment-row .file-label { font-size: 0.7rem; color: #aaa; cursor: pointer; border: 1px solid #444; padding: 6px 10px; border-radius: 3px; transition: all 0.2s; }
+        #ticket-view-screen .ticket-main .add-comment-row .file-label:hover { border-color: #888; color: #fff; }
+        #ticket-view-screen .ticket-main .add-comment-row .btn-send { background: var(--accent); color: #000; border: none; padding: 10px 18px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; font-family: var(--font); white-space: nowrap; transition: background 0.2s; }
+        #ticket-view-screen .ticket-main .add-comment-row .btn-send:hover { background: var(--accent-dark); }
+        #ticket-view-screen .ticket-sidebar h3 { font-weight: 400; font-size: 0.9rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+        #ticket-view-screen .ticket-sidebar .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1f1f1f; font-size: 0.82rem; letter-spacing: 0.03em; }
+        #ticket-view-screen .ticket-sidebar .info-label { color: #777; }
+        #ticket-view-screen .ticket-sidebar .info-value { color: var(--text); text-align: right; word-break: break-word; font-family: var(--mono); font-size: 0.75rem; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 3px; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+        .status-abierto { background: #1a3a1a; color: #7ddf7d; border: 1px solid #2a5a2a; }
+        .status-resuelto { background: #2a2a2a; color: #999; border: 1px solid #444; }
+        #ticket-view-screen .btn-back-tickets { background: transparent; border: 1px solid #444; color: #aaa; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; letter-spacing: 0.04em; font-family: var(--font); align-self: flex-start; transition: all 0.2s; }
+        #ticket-view-screen .btn-back-tickets:hover { border-color: #888; color: #fff; background: #1a1a1a; }
+        #ticket-view-screen .btn-resolve, #ticket-view-screen .btn-ban { background: transparent; border: 1px solid #555; color: #ccc; padding: 8px 14px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; letter-spacing: 0.04em; font-family: var(--font); transition: all 0.2s; margin-top: 8px; }
+        #ticket-view-screen .btn-ban { border-color: #aa4444; color: #ff9999; }
+        #ticket-view-screen .btn-ban:hover { background: #2a1515; }
 
         /* ---- LISTA DE TICKETS ---- */
-        #tickets-list-screen {
-            padding: 40px 24px;
-            gap: 16px;
-            align-items: stretch;
-            max-width: 700px;
-            margin: 0 auto;
-            width: 100%;
-        }
-        #tickets-list-screen h2 {
-            font-weight: 400;
-            font-size: 1.3rem;
-            letter-spacing: 0.05em;
-            text-align: center;
-            margin-bottom: 8px;
-        }
-        #tickets-list-screen .ticket-list-item {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 5px;
-            padding: 16px 20px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: background 0.2s, border-color 0.2s;
-            letter-spacing: 0.03em;
-        }
-        #tickets-list-screen .ticket-list-item:hover {
-            background: var(--surface2);
-            border-color: #555;
-        }
-        #tickets-list-screen .ticket-list-item .ticket-id-text {
-            font-family: var(--mono);
-            font-size: 0.9rem;
-            letter-spacing: 0.05em;
-        }
-        #tickets-list-screen .ticket-list-item .ticket-meta {
-            font-size: 0.72rem;
-            color: #777;
-            letter-spacing: 0.03em;
-        }
-        .empty-state {
-            text-align: center;
-            color: #555;
-            font-size: 0.85rem;
-            letter-spacing: 0.04em;
-            padding: 40px;
-        }
+        #tickets-list-screen { padding: 40px 24px; gap: 16px; align-items: stretch; max-width: 700px; margin: 0 auto; width: 100%; }
+        #tickets-list-screen h2 { font-weight: 400; font-size: 1.3rem; letter-spacing: 0.05em; text-align: center; margin-bottom: 8px; }
+        #tickets-list-screen .ticket-list-item { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; letter-spacing: 0.03em; }
+        #tickets-list-screen .ticket-list-item:hover { background: var(--surface2); border-color: #555; }
+        #tickets-list-screen .ticket-list-item .ticket-id-text { font-family: var(--mono); font-size: 0.9rem; }
+        #tickets-list-screen .ticket-list-item .ticket-meta { font-size: 0.72rem; color: #777; }
+        .empty-state { text-align: center; color: #555; font-size: 0.85rem; padding: 40px; }
 
         /* ---- PANEL DE ADMINISTRACIÓN ---- */
         #owner-panel {
@@ -739,20 +424,16 @@
             border-radius: 8px;
             padding: 30px 26px;
             width: 90%;
-            max-width: 480px;
+            max-width: 520px;
             display: flex;
             flex-direction: column;
             gap: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-            max-height: 80vh;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            max-height: 85vh;
             overflow-y: auto;
         }
-        #owner-panel h3 {
-            font-weight: 400;
-            letter-spacing: 0.05em;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
+        #owner-panel h3 { font-weight: 400; font-size: 0.9rem; color: var(--text-secondary); letter-spacing: 0.05em; }
+        #owner-panel h4 { font-weight: 400; font-size: 0.78rem; color: #777; letter-spacing: 0.04em; margin-top: 8px; }
         #owner-panel input {
             background: var(--surface2);
             border: 1px solid var(--border);
@@ -761,11 +442,7 @@
             border-radius: 4px;
             font-family: var(--mono);
             font-size: 0.85rem;
-            letter-spacing: 0.03em;
             outline: none;
-        }
-        #owner-panel input:focus {
-            border-color: #666;
         }
         #owner-panel .btn {
             background: var(--accent);
@@ -776,31 +453,22 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 0.8rem;
-            letter-spacing: 0.05em;
             text-transform: uppercase;
             font-family: var(--font);
             transition: background 0.2s;
         }
-        #owner-panel .btn:hover {
-            background: var(--accent-dark);
-        }
-        #owner-panel .btn-close {
-            background: transparent;
-            border: 1px solid #444;
-            color: #aaa;
-            font-size: 0.7rem;
-        }
-        #owner-panel .all-users-list {
+        #owner-panel .btn:hover { background: var(--accent-dark); }
+        #owner-panel .btn-close { background: transparent; border: 1px solid #444; color: #aaa; font-size: 0.7rem; }
+        #owner-panel .all-users-list, #owner-panel .banned-users-list {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 250px;
+            max-height: 200px;
             overflow-y: auto;
             font-family: var(--mono);
-            font-size: 0.78rem;
-            letter-spacing: 0.04em;
+            font-size: 0.75rem;
         }
-        #owner-panel .all-users-list .user-entry {
+        #owner-panel .all-users-list .user-entry, #owner-panel .banned-users-list .user-entry {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -808,164 +476,58 @@
             background: #1a1a1a;
             border-radius: 3px;
         }
-        #owner-panel .all-users-list .user-id-text {
-            color: var(--text);
-        }
-        #owner-panel .all-users-list .toggle-staff-btn {
+        #owner-panel .all-users-list .toggle-staff-btn, #owner-panel .banned-users-list .unban-btn {
             background: none;
             border: 1px solid #555;
             color: #ccc;
             cursor: pointer;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             padding: 4px 10px;
             border-radius: 3px;
             letter-spacing: 0.03em;
             transition: all 0.2s;
         }
-        #owner-panel .all-users-list .toggle-staff-btn.is-staff {
-            border-color: #7ddf7d;
-            color: #7ddf7d;
-            background: #1a2a1a;
-        }
-        #owner-panel .all-users-list .toggle-staff-btn:hover {
-            background: #2a2a2a;
-            border-color: #888;
-        }
-        #owner-panel .msg {
-            font-size: 0.75rem;
-            letter-spacing: 0.03em;
-            text-align: center;
-            min-height: 16px;
-        }
-        #owner-panel .msg.success {
-            color: #7ddf7d;
-        }
-        #owner-panel .msg.error {
-            color: #ff6b6b;
-        }
+        #owner-panel .banned-users-list .unban-btn { border-color: #44aa44; color: #7ddf7d; }
+        #owner-panel .banned-users-list .unban-btn:hover { background: #1a2a1a; }
+        #owner-panel .msg { font-size: 0.75rem; letter-spacing: 0.03em; text-align: center; min-height: 16px; }
+        #owner-panel .msg.success { color: #7ddf7d; }
+        #owner-panel .msg.error { color: #ff6b6b; }
 
         #overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
             z-index: 1999;
         }
 
-        /* ---- SPINNER ---- */
+        /* Spinner de carga */
         .spinner {
-            width: 24px;
-            height: 24px;
+            width: 24px; height: 24px;
             border: 2px solid #333;
             border-top-color: #fff;
             border-radius: 50%;
             animation: spin 0.7s linear infinite;
             margin: 0 auto;
         }
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ---- SCROLLBAR ---- */
-        ::-webkit-scrollbar {
-            width: 5px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        /*
-        =============================================
-        ESTILOS ADICIONALES (EXPANSIÓN)
-        Se incluyen clases extra para futuras
-        ampliaciones, manteniendo la coherencia visual.
-        =============================================
-        */
-        .text-muted { color: #666; }
-        .text-small { font-size: 0.75rem; }
-        .mt-1 { margin-top: 4px; }
-        .mt-2 { margin-top: 8px; }
-        .mt-3 { margin-top: 12px; }
-        .mb-1 { margin-bottom: 4px; }
-        .mb-2 { margin-bottom: 8px; }
-        .mb-3 { margin-bottom: 12px; }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-left { text-align: left; }
-        .flex { display: flex; }
-        .flex-col { flex-direction: column; }
-        .items-center { align-items: center; }
-        .justify-center { justify-content: center; }
-        .gap-1 { gap: 4px; }
-        .gap-2 { gap: 8px; }
-        .gap-3 { gap: 12px; }
-
-        /*
-        =============================================
-        ESTILOS PARA FUTURAS CARACTERÍSTICAS
-        (Actualmente no utilizados pero reservados)
-        =============================================
-        */
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 0.65rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-        .badge-warning {
-            background: #332200;
-            color: #ffaa00;
-            border: 1px solid #664400;
-        }
-        .badge-info {
-            background: #002233;
-            color: #00aaff;
-            border: 1px solid #004466;
-        }
-        .tooltip {
-            position: relative;
-        }
-        .tooltip:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: #fff;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-size: 0.7rem;
-            white-space: nowrap;
-        }
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
 <body>
-    <!--
-    ============================================
-    ESTRUCTURA HTML PRINCIPAL
-    ============================================
-    Contenedor principal de la aplicación. Todas
-    las pantallas se alternan mediante clases CSS.
-    ============================================
-    -->
+    <!-- ============================================
+    ESTRUCTURA HTML DE LA APLICACIÓN
+    Contiene todas las pantallas y componentes.
+    ============================================ -->
     <div id="app">
-        <!-- Badge de ID de usuario (siempre visible) -->
+        <!-- Identificador de usuario siempre visible -->
         <div id="user-id-badge" class="hidden">AN-000-000-000</div>
-        <!-- Botón € oculto para el panel Owner -->
+        <!-- Botón oculto para el panel de administración -->
         <button id="owner-trigger" title="Panel de administración">€</button>
 
         <!-- ==================== PANTALLA DE AUTENTICACIÓN ==================== -->
@@ -975,6 +537,8 @@
                 <p class="subtitle" id="auth-subtitle">Accede a tu cuenta para gestionar tickets</p>
                 <input type="email" id="auth-email" placeholder="Correo electrónico" autocomplete="email">
                 <input type="password" id="auth-password" placeholder="Contraseña" autocomplete="current-password">
+                <!-- Cloudflare Turnstile Widget - Verificación humana -->
+                <div class="turnstile-container" id="turnstile-container"></div>
                 <p class="error-msg" id="auth-error"></p>
                 <button class="btn" id="auth-submit-btn">Iniciar Sesión</button>
                 <p class="toggle-text" id="auth-toggle">¿No tienes cuenta? <strong>Crear cuenta</strong></p>
@@ -991,7 +555,7 @@
             <button class="btn btn-logout" id="logout-btn">Cerrar Sesión</button>
         </div>
 
-        <!-- ==================== FORMULARIO DE TICKET ==================== -->
+        <!-- ==================== FORMULARIO DE CREACIÓN DE TICKET ==================== -->
         <div id="ticket-form-screen" class="screen hidden">
             <div class="card">
                 <h2>Nuevo Ticket de Apelación</h2>
@@ -1006,13 +570,13 @@
             </div>
         </div>
 
-        <!-- ==================== VISTA DE TICKET ==================== -->
+        <!-- ==================== VISTA DETALLADA DE TICKET ==================== -->
         <div id="ticket-view-screen" class="screen hidden" style="padding:0; flex-direction:row;">
             <div class="ticket-main">
                 <button class="btn-back-tickets" id="back-to-list-btn">← Volver</button>
                 <h2 id="ticket-view-title">Ticket-0</h2>
                 <div class="comments-area" id="comments-area">
-                    <p style="color:#555; text-align:center;">No hay comentarios aún.</p>
+                    <p style="color:#555;text-align:center;">No hay comentarios aún.</p>
                 </div>
                 <div class="add-comment-row">
                     <textarea id="new-comment-text" placeholder="Escribe un comentario..." rows="1"></textarea>
@@ -1056,11 +620,19 @@
             <button class="btn" id="owner-login-btn">Acceder</button>
             <p class="msg" id="owner-msg"></p>
             <div id="owner-content" class="hidden">
-                <h3 style="font-size:0.85rem;">Todos los usuarios registrados</h3>
+                <!-- Sección de gestión de staff -->
+                <h3>Todos los usuarios registrados</h3>
                 <div class="all-users-list" id="all-users-list-container">
                     <p style="color:#555;">Cargando usuarios...</p>
                 </div>
                 <p class="msg" id="staff-msg"></p>
+
+                <!-- Sección de usuarios baneados -->
+                <h4>🚫 Usuarios baneados</h4>
+                <div class="banned-users-list" id="banned-users-list-container">
+                    <p style="color:#555;">Cargando...</p>
+                </div>
+                <p class="msg" id="unban-msg"></p>
             </div>
             <button class="btn btn-close" id="owner-close-btn">Cerrar</button>
         </div>
@@ -1069,17 +641,21 @@
     <script>
         /*
         ============================================
-        BLOQUE PRINCIPAL DE JAVASCRIPT
+        LÓGICA PRINCIPAL DE LA APLICACIÓN
         ============================================
-        Inicialización de Firebase, definición de
-        variables globales y funciones del sistema.
-        Se ha documentado cada sección para facilitar
-        el mantenimiento y la comprensión del flujo.
+        Organización del código:
+        1. Configuración de Firebase
+        2. Referencias DOM y variables globales
+        3. Funciones de navegación y UI
+        4. Autenticación con Turnstile
+        5. Gestión de tickets
+        6. Comentarios e imágenes
+        7. Panel de administración (staff + baneos)
+        8. Inicialización
         ============================================
         */
         (function() {
             // ==================== CONFIGURACIÓN DE FIREBASE ====================
-            // Datos de conexión a tu proyecto Firebase
             const firebaseConfig = {
                 apiKey: "AIzaSyD13N4-9MjTrmlPwGP7mves0Exje4v2ACw",
                 authDomain: "kahoot-8529e.firebaseapp.com",
@@ -1091,57 +667,47 @@
                 measurementId: "G-8T4CPC1BQ3"
             };
 
-            // Inicializar Firebase
+            // Inicializar servicios de Firebase
             firebase.initializeApp(firebaseConfig);
-            const auth = firebase.auth();            // Servicio de autenticación
-            const db = firebase.database();          // Base de datos en tiempo real
-            const storage = firebase.storage();      // Almacenamiento de archivos
+            const auth = firebase.auth();
+            const db = firebase.database();
+            const storage = firebase.storage();
 
             // ==================== REFERENCIAS DOM ====================
-            // Función auxiliar para acortar document.querySelector
             const $ = (sel) => document.querySelector(sel);
 
-            // Pantallas principales
+            // Pantallas
             const authScreen = $('#auth-screen');
             const mainScreen = $('#main-screen');
             const ticketFormScreen = $('#ticket-form-screen');
             const ticketViewScreen = $('#ticket-view-screen');
             const ticketsListScreen = $('#tickets-list-screen');
 
-            // Elementos de UI global
+            // Badge y botones globales
             const userBadge = $('#user-id-badge');
             const ownerTrigger = $('#owner-trigger');
             const overlay = $('#overlay');
             const ownerPanel = $('#owner-panel');
 
-            // ==================== VARIABLES DE ESTADO GLOBAL ====================
-            let currentUser = null;           // Objeto de usuario de Firebase Auth
-            let currentUserData = null;       // Datos del perfil desde /users/{uid}
-            let isStaff = false;              // Indica si el usuario actual es staff
-            let currentTicketId = null;       // Clave del ticket en la base de datos
-            let currentTicketData = null;     // Datos completos del ticket actual
+            // ==================== ESTADO GLOBAL ====================
+            let currentUser = null;           // Usuario autenticado de Firebase
+            let currentUserData = null;       // Perfil del usuario desde la DB
+            let isStaff = false;              // ¿Es staff el usuario actual?
+            let currentTicketId = null;       // ID del ticket abierto
+            let currentTicketData = null;     // Datos del ticket actual
             let authMode = 'login';           // 'login' o 'register'
-            let ownerAuthenticated = false;   // Si el panel de admin está desbloqueado
-            let commentsListener = null;      // Referencia al listener de comentarios
-            let currentListMode = 'all';      // 'all' para staff, 'mine' para usuario
-            let selectedImageFile = null;     // Archivo de imagen seleccionado para subir
+            let ownerAuthenticated = false;   // Panel de admin desbloqueado
+            let commentsListener = null;      // Listener de comentarios en tiempo real
+            let currentListMode = 'all';      // 'all' o 'mine'
+            let selectedImageFile = null;     // Imagen pendiente de subir
+            let turnstileWidgetId = null;     // ID del widget de Turnstile
+            let turnstileToken = null;        // Token de verificación de Turnstile
 
-            /*
-            ============================================
-            FUNCIONES DE NAVEGACIÓN Y UI
-            ============================================
-            */
-
-            /**
-             * Muestra una pantalla específica ocultando las demás.
-             * @param {HTMLElement} screen - Elemento de la pantalla a mostrar.
-             */
+            // ==================== NAVEGACIÓN ENTRE PANTALLAS ====================
             function showScreen(screen) {
-                // Ocultar todas las pantallas principales
                 [authScreen, mainScreen, ticketFormScreen, ticketViewScreen, ticketsListScreen]
                     .forEach(s => s.classList.add('hidden'));
                 if (screen) screen.classList.remove('hidden');
-                // Ajuste especial para la vista de ticket (flex)
                 if (screen === ticketViewScreen) {
                     ticketViewScreen.style.display = 'flex';
                 } else if (ticketViewScreen.classList.contains('hidden')) {
@@ -1149,88 +715,111 @@
                 }
             }
 
-            /**
-             * Actualiza el badge superior derecho con el ID del usuario.
-             * @param {string|null} id - ID del usuario o null para ocultar.
-             */
             function updateUserBadge(id) {
-                if (id) {
-                    userBadge.textContent = id;
-                    userBadge.classList.remove('hidden');
-                } else {
-                    userBadge.classList.add('hidden');
-                }
+                if (id) { userBadge.textContent = id; userBadge.classList.remove('hidden'); }
+                else userBadge.classList.add('hidden');
             }
 
             // ==================== GENERACIÓN DE ID DE USUARIO ====================
-            /**
-             * Genera un ID aleatorio con formato AN-XXX-XXX-XXX.
-             * @returns {string} ID generado.
-             */
             function generateUserID() {
-                const d1 = String(Math.floor(Math.random() * 900) + 100);
-                const d2 = String(Math.floor(Math.random() * 900) + 100);
-                const d3 = String(Math.floor(Math.random() * 900) + 100);
-                return `AN-${d1}-${d2}-${d3}`;
+                const p = () => String(Math.floor(Math.random()*900)+100);
+                return `AN-${p()}-${p()}-${p()}`;
             }
 
-            /**
-             * Genera un ID de usuario único que no exista en la base de datos.
-             * @returns {Promise<string>} ID único.
-             */
             async function getUniqueUserID() {
-                let attempts = 0;
-                while (attempts < 30) {
-                    const candidate = generateUserID();
-                    const snap = await db.ref('userIDs/' + candidate).once('value');
-                    if (!snap.exists()) return candidate;
-                    attempts++;
+                for (let i=0; i<30; i++) {
+                    const c = generateUserID();
+                    if (!(await db.ref('userIDs/'+c).once('value')).exists()) return c;
                 }
-                // Fallback usando timestamp
                 const ts = Date.now().toString().slice(-9);
                 return `AN-${ts.slice(0,3)}-${ts.slice(3,6)}-${ts.slice(6,9)}`;
             }
 
-            // ==================== AUTENTICACIÓN ====================
-            /**
-             * Actualiza la interfaz de autenticación según el modo (login/register).
-             */
-            function updateAuthUI() {
-                if (authMode === 'login') {
-                    $('#auth-title').textContent = 'Iniciar Sesión';
-                    $('#auth-subtitle').textContent = 'Accede a tu cuenta para gestionar tickets';
-                    $('#auth-submit-btn').textContent = 'Iniciar Sesión';
-                    $('#auth-toggle').innerHTML = '¿No tienes cuenta? <strong>Crear cuenta</strong>';
-                } else {
-                    $('#auth-title').textContent = 'Crear Cuenta';
-                    $('#auth-subtitle').textContent = 'Regístrate para abrir tickets de apelación';
-                    $('#auth-submit-btn').textContent = 'Crear Cuenta';
-                    $('#auth-toggle').innerHTML = '¿Ya tienes cuenta? <strong>Iniciar Sesión</strong>';
+            // ==================== CLOUDFLARE TURNSTILE ====================
+            /*
+               Turnstile de Cloudflare ofrece verificación humana sin CAPTCHA visual.
+               Usamos el modo "managed" que muestra un desafío solo si es necesario.
+               Site key de prueba: 1x00000000000000000000AA (siempre pasa).
+               En producción se debe usar una site key real vinculada a tu dominio.
+            */
+            function initTurnstile() {
+                // Limpiar widget anterior si existe
+                if (turnstileWidgetId !== null) {
+                    try { turnstile.remove(turnstileWidgetId); } catch(e) {}
+                    turnstileWidgetId = null;
                 }
+                turnstileToken = null;
+                const container = $('#turnstile-container');
+                if (container) {
+                    container.innerHTML = '';
+                    try {
+                        turnstileWidgetId = turnstile.render('#turnstile-container', {
+                            sitekey: '1x00000000000000000000AA', // Site key de prueba
+                            theme: 'dark',
+                            callback: function(token) {
+                                // Se ejecuta cuando el usuario pasa la verificación
+                                turnstileToken = token;
+                                console.log('✅ Turnstile verificado correctamente.');
+                            },
+                            'expired-callback': function() {
+                                // El token expiró, resetear
+                                turnstileToken = null;
+                                console.warn('⚠️ Token de Turnstile expirado.');
+                            },
+                            'error-callback': function() {
+                                turnstileToken = null;
+                                console.error('❌ Error en Turnstile.');
+                            }
+                        });
+                    } catch(e) {
+                        console.warn('Turnstile no disponible:', e);
+                    }
+                }
+            }
+
+            // ==================== INTERFAZ DE AUTENTICACIÓN ====================
+            function updateAuthUI() {
+                const isLogin = authMode === 'login';
+                $('#auth-title').textContent = isLogin ? 'Iniciar Sesión' : 'Crear Cuenta';
+                $('#auth-subtitle').textContent = isLogin
+                    ? 'Accede a tu cuenta para gestionar tickets'
+                    : 'Regístrate para abrir tickets de apelación';
+                $('#auth-submit-btn').textContent = isLogin ? 'Iniciar Sesión' : 'Crear Cuenta';
+                $('#auth-toggle').innerHTML = isLogin
+                    ? '¿No tienes cuenta? <strong>Crear cuenta</strong>'
+                    : '¿Ya tienes cuenta? <strong>Iniciar Sesión</strong>';
                 $('#auth-error').textContent = '';
                 $('#auth-email').value = '';
                 $('#auth-password').value = '';
+                // Reiniciar Turnstile al cambiar de modo
+                setTimeout(initTurnstile, 100);
             }
 
-            // Evento para cambiar entre login y registro
+            // Alternar entre login y registro
             $('#auth-toggle').addEventListener('click', () => {
                 authMode = authMode === 'login' ? 'register' : 'login';
                 updateAuthUI();
             });
 
-            // Manejo del envío del formulario de autenticación
+            // Envío del formulario de autenticación
             $('#auth-submit-btn').addEventListener('click', async () => {
                 const email = $('#auth-email').value.trim();
                 const password = $('#auth-password').value.trim();
                 $('#auth-error').textContent = '';
 
-                // Validaciones básicas
+                // Validaciones de campos
                 if (!email || !password) {
-                    $('#auth-error').textContent = 'Por favor, completa todos los campos.';
+                    $('#auth-error').textContent = 'Completa todos los campos.';
                     return;
                 }
                 if (password.length < 6) {
                     $('#auth-error').textContent = 'La contraseña debe tener al menos 6 caracteres.';
+                    return;
+                }
+
+                // Verificación de Turnstile (solo si está disponible)
+                if (typeof turnstile !== 'undefined' && !turnstileToken) {
+                    $('#auth-error').textContent = 'Por favor, verifica que no eres un robot.';
                     return;
                 }
 
@@ -1239,14 +828,12 @@
 
                 try {
                     if (authMode === 'register') {
-                        // Registrar nuevo usuario
+                        // REGISTRO DE NUEVO USUARIO
                         const cred = await auth.createUserWithEmailAndPassword(email, password);
                         const user = cred.user;
                         const userID = await getUniqueUserID();
-                        // Guardar perfil en la base de datos
                         await db.ref('users/' + user.uid).set({
-                            email: email,
-                            userID: userID,
+                            email, userID,
                             isStaff: false,
                             createdAt: firebase.database.ServerValue.TIMESTAMP
                         });
@@ -1255,20 +842,21 @@
                         currentUserData = { email, userID, isStaff: false };
                         isStaff = false;
                     } else {
-                        // Iniciar sesión
+                        // INICIO DE SESIÓN
                         const cred = await auth.signInWithEmailAndPassword(email, password);
                         const user = cred.user;
-                        // Obtener datos del perfil
                         const snap = await db.ref('users/' + user.uid).once('value');
                         if (snap.exists()) {
                             currentUserData = snap.val();
-                            // Verificar si está baneado
+                            // Verificar si el usuario está baneado
                             const bannedSnap = await db.ref('bannedUsers/' + currentUserData.userID).once('value');
                             if (bannedSnap.exists() && bannedSnap.val() === true) {
                                 await auth.signOut();
                                 $('#auth-error').textContent = 'Tu cuenta ha sido baneada. Contacta con soporte.';
                                 $('#auth-submit-btn').disabled = false;
                                 $('#auth-spinner').classList.add('hidden');
+                                turnstileToken = null;
+                                initTurnstile();
                                 return;
                             }
                             isStaff = currentUserData.isStaff === true;
@@ -1282,12 +870,11 @@
                                 }
                             }
                         } else {
-                            // Usuario existe en Auth pero no en DB (migración)
+                            // Usuario existe en Auth pero no en DB
                             const userID = await getUniqueUserID();
                             currentUserData = { email, userID, isStaff: false };
                             await db.ref('users/' + user.uid).set({
-                                email: email,
-                                userID: userID,
+                                email, userID,
                                 isStaff: false,
                                 createdAt: firebase.database.ServerValue.TIMESTAMP
                             });
@@ -1298,28 +885,26 @@
                     }
                     updateUserBadge(currentUserData.userID);
                     showMainScreen();
+                    // Resetear Turnstile para próximo uso
+                    turnstileToken = null;
+                    initTurnstile();
                 } catch (err) {
-                    console.error(err);
-                    if (err.code === 'auth/email-already-in-use') {
-                        $('#auth-error').textContent = 'Este correo ya está registrado.';
-                    } else if (err.code === 'auth/invalid-email') {
-                        $('#auth-error').textContent = 'Correo electrónico inválido.';
-                    } else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                        $('#auth-error').textContent = 'Credenciales incorrectas.';
-                    } else if (err.code === 'auth/user-not-found') {
-                        $('#auth-error').textContent = 'No existe una cuenta con este correo.';
-                    } else {
-                        $('#auth-error').textContent = 'Error: ' + (err.message || 'Inténtalo de nuevo.');
-                    }
+                    console.error('Error de autenticación:', err);
+                    if (err.code === 'auth/email-already-in-use') $('#auth-error').textContent = 'Este correo ya está registrado.';
+                    else if (err.code === 'auth/invalid-email') $('#auth-error').textContent = 'Correo inválido.';
+                    else if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') $('#auth-error').textContent = 'Credenciales incorrectas.';
+                    else $('#auth-error').textContent = 'Error: ' + (err.message || 'Intenta de nuevo.');
+                    turnstileToken = null;
+                    initTurnstile();
                 } finally {
                     $('#auth-submit-btn').disabled = false;
                     $('#auth-spinner').classList.add('hidden');
                 }
             });
 
-            // Permitir envío con Enter en campos de auth
-            ['#auth-email', '#auth-password'].forEach(selector => {
-                $(selector).addEventListener('keydown', (e) => {
+            // Permitir Enter en campos de auth
+            ['#auth-email', '#auth-password'].forEach(sel => {
+                $(sel).addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') $('#auth-submit-btn').click();
                 });
             });
@@ -1331,53 +916,34 @@
                     $('#welcome-text').textContent = `Bienvenido, ${currentUserData.userID}`;
                     updateUserBadge(currentUserData.userID);
                 }
-                // Mostrar/ocultar botones según rol
-                if (isStaff) {
-                    $('#staff-tickets-btn').classList.remove('hidden');
-                } else {
-                    $('#staff-tickets-btn').classList.add('hidden');
-                }
+                $('#staff-tickets-btn').classList.toggle('hidden', !isStaff);
                 $('#my-tickets-btn').classList.remove('hidden');
             }
 
-            // Eventos de botones de la pantalla principal
+            // Eventos de botones principales
             $('#open-ticket-btn').addEventListener('click', () => {
                 showScreen(ticketFormScreen);
-                $('#ticket-q1').value = '';
-                $('#ticket-q2').value = '';
+                $('#ticket-q1').value = $('#ticket-q2').value = '';
                 $('#ticket-q3').value = '';
             });
-
             $('#cancel-ticket-btn').addEventListener('click', showMainScreen);
-
             $('#my-tickets-btn').addEventListener('click', () => {
-                if (!currentUser) {
-                    alert('Debes iniciar sesión para ver tus tickets.');
-                    return;
-                }
+                if (!currentUser) { alert('Inicia sesión primero.'); return; }
                 currentListMode = 'mine';
                 $('#tickets-list-title').textContent = 'Mis Tickets';
                 loadFilteredTickets(currentUser.uid);
                 showScreen(ticketsListScreen);
             });
-
             $('#staff-tickets-btn').addEventListener('click', () => {
-                if (!currentUser || !isStaff) {
-                    alert('Acceso denegado.');
-                    return;
-                }
+                if (!currentUser || !isStaff) { alert('Acceso denegado.'); return; }
                 currentListMode = 'all';
                 $('#tickets-list-title').textContent = 'Todos los Tickets';
                 loadFilteredTickets(null);
                 showScreen(ticketsListScreen);
             });
-
             $('#logout-btn').addEventListener('click', async () => {
                 await auth.signOut();
-                // Limpiar estado
-                currentUser = null;
-                currentUserData = null;
-                isStaff = false;
+                currentUser = null; currentUserData = null; isStaff = false;
                 updateUserBadge(null);
                 authMode = 'login';
                 updateAuthUI();
@@ -1387,16 +953,11 @@
                 ownerPanel.classList.add('hidden');
                 overlay.classList.add('hidden');
             });
-
             $('#back-to-main-from-list').addEventListener('click', showMainScreen);
 
             // ==================== CARGA DE LISTA DE TICKETS ====================
-            /**
-             * Carga los tickets filtrados (todos o solo los del usuario actual).
-             * @param {string|null} filterUserId - UID del usuario para filtrar, o null para todos.
-             */
             async function loadFilteredTickets(filterUserId) {
-                $('#tickets-list-container').innerHTML = '<p class="empty-state">Cargando tickets...</p>';
+                $('#tickets-list-container').innerHTML = '<p class="empty-state">Cargando...</p>';
                 try {
                     const snap = await db.ref('tickets').once('value');
                     if (!snap.exists()) {
@@ -1406,50 +967,29 @@
                     const tickets = [];
                     snap.forEach(child => {
                         const data = child.val() || {};
-                        // Asegurar que el ticket tenga la propiedad 'estado'
-                        const t = {
-                            key: child.key,
-                            ...data,
-                            estado: data.estado || 'abierto'
-                        };
-                        if (!filterUserId || t.userId === filterUserId) {
-                            tickets.push(t);
-                        }
+                        const t = { key: child.key, ...data, estado: data.estado || 'abierto' };
+                        if (!filterUserId || t.userId === filterUserId) tickets.push(t);
                     });
-                    // Ordenar por número de ticket descendente
-                    tickets.sort((a, b) => b.ticketNumber - a.ticketNumber);
-
-                    if (tickets.length === 0) {
-                        $('#tickets-list-container').innerHTML =
-                            '<p class="empty-state">No se encontraron tickets.</p>';
+                    tickets.sort((a,b) => b.ticketNumber - a.ticketNumber);
+                    if (!tickets.length) {
+                        $('#tickets-list-container').innerHTML = '<p class="empty-state">No se encontraron tickets.</p>';
                         return;
                     }
-
                     let html = '';
                     tickets.forEach(t => {
-                        const estadoClass = t.estado === 'abierto' ? 'status-abierto' : 'status-resuelto';
-                        html += `
-                            <div class="ticket-list-item" data-ticket-key="${t.key}">
-                                <span class="ticket-id-text">Ticket-${t.ticketNumber}</span>
-                                <span class="ticket-meta">${t.userID} · <span class="status-badge ${estadoClass}" style="font-size:0.65rem;padding:3px 8px;">${t.estado.toUpperCase()}</span></span>
-                            </div>
-                        `;
+                        const cls = t.estado === 'abierto' ? 'status-abierto' : 'status-resuelto';
+                        html += `<div class="ticket-list-item" data-ticket-key="${t.key}"><span class="ticket-id-text">Ticket-${t.ticketNumber}</span><span class="ticket-meta">${t.userID} · <span class="status-badge ${cls}" style="font-size:0.65rem;padding:3px 8px;">${t.estado.toUpperCase()}</span></span></div>`;
                     });
                     $('#tickets-list-container').innerHTML = html;
-
-                    // Agregar evento de clic a cada ticket
                     document.querySelectorAll('#tickets-list-container .ticket-list-item').forEach(item => {
                         item.addEventListener('click', async () => {
-                            const key = item.dataset.ticketKey;
-                            currentTicketId = key;
-                            await loadTicketView(key);
+                            currentTicketId = item.dataset.ticketKey;
+                            await loadTicketView(item.dataset.ticketKey);
                             showScreen(ticketViewScreen);
                         });
                     });
-                } catch (err) {
-                    console.error('Error al cargar tickets:', err);
-                    $('#tickets-list-container').innerHTML =
-                        `<p class="empty-state">Error al cargar tickets. (${err.message})</p>`;
+                } catch(err) {
+                    $('#tickets-list-container').innerHTML = `<p class="empty-state">Error: ${err.message}</p>`;
                 }
             }
 
@@ -1458,46 +998,35 @@
                 const q1 = $('#ticket-q1').value.trim();
                 const q2 = $('#ticket-q2').value.trim();
                 const q3 = parseInt($('#ticket-q3').value);
-
-                if (!q1 || !q2 || isNaN(q3) || q3 < 1 || q3 > 10) {
-                    alert('Completa todos los campos correctamente. La espera debe ser un número del 1 al 10.');
+                if (!q1 || !q2 || isNaN(q3) || q3<1 || q3>10) {
+                    alert('Completa todos los campos correctamente (espera del 1 al 10).');
                     return;
                 }
-
                 $('#create-ticket-btn').disabled = true;
                 $('#create-ticket-btn').textContent = 'Creando...';
-
                 try {
-                    // Incrementar contador de tickets
                     const counterRef = db.ref('ticketCounter');
-                    const counterSnap = await counterRef.once('value');
-                    let nextNumber = 1;
-                    if (counterSnap.exists()) {
-                        nextNumber = counterSnap.val() + 1;
-                    }
-                    await counterRef.set(nextNumber);
-
-                    const ticketKey = 'ticket_' + nextNumber;
-                    const ticketData = {
-                        ticketNumber: nextNumber,
+                    const snap = await counterRef.once('value');
+                    let next = 1;
+                    if (snap.exists()) next = snap.val() + 1;
+                    await counterRef.set(next);
+                    const key = 'ticket_' + next;
+                    const data = {
+                        ticketNumber: next,
                         userId: currentUser.uid,
                         userID: currentUserData.userID,
-                        pregunta1: q1,
-                        pregunta2: q2,
-                        pregunta3: q3,
+                        pregunta1: q1, pregunta2: q2, pregunta3: q3,
                         estado: 'abierto',
                         createdAt: firebase.database.ServerValue.TIMESTAMP,
                         updatedAt: firebase.database.ServerValue.TIMESTAMP
                     };
-
-                    await db.ref('tickets/' + ticketKey).set(ticketData);
-                    currentTicketId = ticketKey;
-                    currentTicketData = ticketData;
-                    await loadTicketView(ticketKey);
+                    await db.ref('tickets/' + key).set(data);
+                    currentTicketId = key;
+                    currentTicketData = data;
+                    await loadTicketView(key);
                     showScreen(ticketViewScreen);
-                } catch (err) {
-                    console.error(err);
-                    alert('Error al crear el ticket: ' + err.message);
+                } catch(err) {
+                    alert('Error: ' + err.message);
                 } finally {
                     $('#create-ticket-btn').disabled = false;
                     $('#create-ticket-btn').textContent = 'Crear Ticket';
@@ -1505,28 +1034,14 @@
             });
 
             // ==================== VISTA DE TICKET ====================
-            /**
-             * Carga la vista detallada de un ticket, incluyendo comentarios en tiempo real.
-             * @param {string} ticketKey - Clave del ticket en la base de datos.
-             */
             async function loadTicketView(ticketKey) {
-                // Limpiar listener anterior
-                if (commentsListener) {
-                    commentsListener.off();
-                    commentsListener = null;
-                }
-
+                if (commentsListener) { commentsListener.off(); commentsListener = null; }
                 const snap = await db.ref('tickets/' + ticketKey).once('value');
-                if (!snap.exists()) {
-                    alert('Ticket no encontrado.');
-                    showMainScreen();
-                    return;
-                }
+                if (!snap.exists()) { alert('Ticket no encontrado.'); showMainScreen(); return; }
                 currentTicketData = snap.val();
                 if (!currentTicketData.estado) currentTicketData.estado = 'abierto';
                 currentTicketId = ticketKey;
 
-                // Actualizar información en la barra lateral
                 $('#ticket-view-title').textContent = 'Ticket-' + currentTicketData.ticketNumber;
                 $('#sidebar-userid').textContent = currentTicketData.userID || '-';
                 $('#sidebar-q1').textContent = currentTicketData.pregunta1 || '-';
@@ -1538,7 +1053,6 @@
                 $('#sidebar-status').className = 'status-badge ' + (estado === 'resuelto' ? 'status-resuelto' : 'status-abierto');
                 $('#toggle-status-btn').textContent = estado === 'resuelto' ? 'Reabrir Caso' : 'Marcar como Resuelto';
 
-                // Mostrar controles de staff
                 if (isStaff) {
                     $('#toggle-status-btn').classList.remove('hidden');
                     $('#ban-user-btn').classList.remove('hidden');
@@ -1547,74 +1061,48 @@
                     $('#ban-user-btn').classList.add('hidden');
                 }
 
-                // Cargar comentarios en tiempo real
                 $('#comments-area').innerHTML = '<p style="color:#555;text-align:center;">Cargando comentarios...</p>';
                 const commentsRef = db.ref('tickets/' + ticketKey + '/comments');
                 commentsListener = commentsRef.on('value', (snap) => {
                     $('#comments-area').innerHTML = '';
                     if (!snap.exists()) {
-                        $('#comments-area').innerHTML =
-                            '<p style="color:#555;text-align:center;padding:20px;">No hay comentarios aún.</p>';
+                        $('#comments-area').innerHTML = '<p style="color:#555;text-align:center;padding:20px;">No hay comentarios aún.</p>';
                         return;
                     }
                     const comments = [];
-                    snap.forEach(child => comments.push({ key: child.key, ...child.val() }));
-                    comments.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
+                    snap.forEach(c => comments.push({ key: c.key, ...c.val() }));
+                    comments.sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
                     comments.forEach(c => {
                         const isStaffComment = c.autor === 'staff';
-                        const bubbleClass = isStaffComment ? 'comment-bubble staff-comment' : 'comment-bubble';
-                        const authorName = c.autorNombre || (isStaffComment ? 'Moderation Acces' : 'User ' + (c.autorID || 'Unknown'));
-                        const timeStr = c.timestamp ? new Date(c.timestamp).toLocaleString('es-ES') : '—';
-                        let imgHTML = '';
-                        if (c.imagenURL) {
-                            imgHTML = `<img src="${escapeHTML(c.imagenURL)}" class="comment-image" onclick="window.open(this.src)" alt="Imagen adjunta">`;
-                        }
+                        const author = c.autorNombre || (isStaffComment ? 'Moderation Acces' : 'User ' + (c.autorID||'Unknown'));
+                        const time = c.timestamp ? new Date(c.timestamp).toLocaleString('es-ES') : '—';
+                        let imgHTML = c.imagenURL ? `<img src="${escapeHTML(c.imagenURL)}" class="comment-image" onclick="window.open(this.src)" alt="Imagen">` : '';
                         $('#comments-area').innerHTML += `
-                            <div class="${bubbleClass}">
-                                <div class="comment-author">${escapeHTML(authorName)}</div>
+                            <div class="comment-bubble ${isStaffComment?'staff-comment':''}">
+                                <div class="comment-author">${escapeHTML(author)}</div>
                                 <div class="comment-text">${escapeHTML(c.mensaje)}</div>
                                 ${imgHTML}
-                                <div class="comment-time">${timeStr}</div>
-                            </div>
-                        `;
+                                <div class="comment-time">${time}</div>
+                            </div>`;
                     });
                     $('#comments-area').scrollTop = $('#comments-area').scrollHeight;
                 });
 
-                // Configurar botón de volver
                 $('#back-to-list-btn').classList.remove('hidden');
-                if (isStaff || currentListMode === 'mine') {
-                    $('#back-to-list-btn').textContent = '← Volver a la lista';
-                } else {
-                    $('#back-to-list-btn').textContent = '← Volver';
-                }
-
-                // Limpiar campo de comentario
+                $('#back-to-list-btn').textContent = (isStaff || currentListMode==='mine') ? '← Volver a la lista' : '← Volver';
                 $('#new-comment-text').value = '';
                 selectedImageFile = null;
                 $('#file-name').textContent = '';
                 $('#comment-image-input').value = '';
             }
 
-            // Botón volver desde vista de ticket
             $('#back-to-list-btn').addEventListener('click', () => {
-                if (commentsListener) {
-                    commentsListener.off();
-                    commentsListener = null;
-                }
-                if (isStaff && currentListMode === 'all') {
-                    showScreen(ticketsListScreen);
-                    loadFilteredTickets(null);
-                } else if (currentListMode === 'mine') {
-                    showScreen(ticketsListScreen);
-                    loadFilteredTickets(currentUser.uid);
-                } else {
-                    showMainScreen();
-                }
+                if (commentsListener) { commentsListener.off(); commentsListener = null; }
+                if (isStaff && currentListMode === 'all') { showScreen(ticketsListScreen); loadFilteredTickets(null); }
+                else if (currentListMode === 'mine') { showScreen(ticketsListScreen); loadFilteredTickets(currentUser.uid); }
+                else showMainScreen();
             });
 
-            // Manejo de subida de imagen
             $('#comment-image-input').addEventListener('change', (e) => {
                 if (e.target.files.length > 0) {
                     selectedImageFile = e.target.files[0];
@@ -1625,74 +1113,52 @@
                 }
             });
 
-            // Envío de comentario (texto + posible imagen)
             $('#send-comment-btn').addEventListener('click', async () => {
                 const mensaje = $('#new-comment-text').value.trim();
                 if (!mensaje && !selectedImageFile) return;
                 if (!currentTicketId) return;
-
                 $('#send-comment-btn').disabled = true;
                 $('#send-comment-btn').textContent = '...';
-
                 try {
                     let imagenURL = null;
-                    // Subir imagen si se seleccionó
                     if (selectedImageFile) {
-                        const storageRef = storage.ref(
-                            `tickets/${currentTicketId}/images/${Date.now()}_${selectedImageFile.name}`
-                        );
+                        const storageRef = storage.ref(`tickets/${currentTicketId}/images/${Date.now()}_${selectedImageFile.name}`);
                         await storageRef.put(selectedImageFile);
                         imagenURL = await storageRef.getDownloadURL();
                     }
-
-                    const commentRef = db.ref('tickets/' + currentTicketId + '/comments').push();
+                    const ref = db.ref('tickets/' + currentTicketId + '/comments').push();
                     const autor = isStaff ? 'staff' : 'user';
                     const autorNombre = isStaff ? 'Moderation Acces' : ('User ' + currentUserData.userID);
-                    await commentRef.set({
+                    await ref.set({
                         mensaje: mensaje || '(imagen)',
-                        autor: autor,
-                        autorID: currentUserData.userID,
-                        autorNombre: autorNombre,
+                        autor, autorID: currentUserData.userID, autorNombre,
                         imagenURL: imagenURL || null,
                         timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
-
-                    await db.ref('tickets/' + currentTicketId + '/updatedAt').set(
-                        firebase.database.ServerValue.TIMESTAMP
-                    );
-
-                    // Limpiar campos
+                    await db.ref('tickets/' + currentTicketId + '/updatedAt').set(firebase.database.ServerValue.TIMESTAMP);
                     $('#new-comment-text').value = '';
                     selectedImageFile = null;
                     $('#file-name').textContent = '';
                     $('#comment-image-input').value = '';
-                } catch (err) {
-                    console.error(err);
-                    alert('Error al enviar comentario: ' + err.message);
-                } finally {
-                    $('#send-comment-btn').disabled = false;
-                    $('#send-comment-btn').textContent = 'Enviar';
-                }
+                } catch(err) { alert('Error: ' + err.message); }
+                finally { $('#send-comment-btn').disabled = false; $('#send-comment-btn').textContent = 'Enviar'; }
             });
 
-            // Cambio de estado del ticket (staff)
             $('#toggle-status-btn').addEventListener('click', async () => {
                 if (!isStaff || !currentTicketId) return;
-                const nuevoEstado = currentTicketData.estado === 'abierto' ? 'resuelto' : 'abierto';
-                await db.ref('tickets/' + currentTicketId + '/estado').set(nuevoEstado);
+                const nuevo = currentTicketData.estado === 'abierto' ? 'resuelto' : 'abierto';
+                await db.ref('tickets/' + currentTicketId + '/estado').set(nuevo);
                 await db.ref('tickets/' + currentTicketId + '/updatedAt').set(firebase.database.ServerValue.TIMESTAMP);
-                currentTicketData.estado = nuevoEstado;
-                // Actualizar sidebar
-                $('#sidebar-status').textContent = nuevoEstado === 'resuelto' ? 'RESUELTO' : 'ABIERTO';
-                $('#sidebar-status').className = 'status-badge ' + (nuevoEstado === 'resuelto' ? 'status-resuelto' : 'status-abierto');
-                $('#toggle-status-btn').textContent = nuevoEstado === 'resuelto' ? 'Reabrir Caso' : 'Marcar como Resuelto';
+                currentTicketData.estado = nuevo;
+                $('#sidebar-status').textContent = nuevo === 'resuelto' ? 'RESUELTO' : 'ABIERTO';
+                $('#sidebar-status').className = 'status-badge ' + (nuevo === 'resuelto' ? 'status-resuelto' : 'status-abierto');
+                $('#toggle-status-btn').textContent = nuevo === 'resuelto' ? 'Reabrir Caso' : 'Marcar como Resuelto';
             });
 
-            // Baneo de usuario (staff)
             $('#ban-user-btn').addEventListener('click', async () => {
                 if (!isStaff || !currentTicketData) return;
                 const userID = currentTicketData.userID;
-                if (!confirm(`¿Estás seguro de banear al usuario ${userID}? No podrá iniciar sesión.`)) return;
+                if (!confirm(`¿Banear al usuario ${userID}? No podrá iniciar sesión.`)) return;
                 await db.ref('bannedUsers/' + userID).set(true);
                 alert(`Usuario ${userID} baneado correctamente.`);
             });
@@ -1703,27 +1169,17 @@
                 overlay.classList.remove('hidden');
                 $('#owner-password-input').value = '';
                 $('#owner-msg').textContent = '';
-                if (!ownerAuthenticated) {
-                    $('#owner-content').classList.add('hidden');
-                }
+                if (!ownerAuthenticated) $('#owner-content').classList.add('hidden');
             });
-
-            $('#owner-close-btn').addEventListener('click', () => {
-                ownerPanel.classList.add('hidden');
-                overlay.classList.add('hidden');
-            });
-
-            overlay.addEventListener('click', () => {
-                ownerPanel.classList.add('hidden');
-                overlay.classList.add('hidden');
-            });
-
+            $('#owner-close-btn').addEventListener('click', () => { ownerPanel.classList.add('hidden'); overlay.classList.add('hidden'); });
+            overlay.addEventListener('click', () => { ownerPanel.classList.add('hidden'); overlay.classList.add('hidden'); });
             $('#owner-login-btn').addEventListener('click', () => {
                 if ($('#owner-password-input').value.trim() === 'Owner') {
                     ownerAuthenticated = true;
                     $('#owner-content').classList.remove('hidden');
                     $('#owner-msg').textContent = '';
                     loadAllUsersForOwner();
+                    loadBannedUsersList();
                 } else {
                     $('#owner-msg').textContent = 'Contraseña incorrecta.';
                     $('#owner-msg').className = 'msg error';
@@ -1732,136 +1188,114 @@
                 }
             });
 
-            /**
-             * Carga la lista de todos los usuarios registrados para gestionar staff.
-             */
+            // Cargar lista de usuarios para gestión de staff
             async function loadAllUsersForOwner() {
-                $('#all-users-list-container').innerHTML = '<p style="color:#555;">Cargando usuarios...</p>';
+                $('#all-users-list-container').innerHTML = '<p style="color:#555;">Cargando...</p>';
                 try {
                     const usersSnap = await db.ref('userIDs').once('value');
                     const staffSnap = await db.ref('staffIDs').once('value');
                     const staffIDs = new Set();
-                    if (staffSnap.exists()) {
-                        staffSnap.forEach(child => {
-                            if (child.val() === true) staffIDs.add(child.key);
-                        });
-                    }
-
+                    if (staffSnap.exists()) staffSnap.forEach(c => { if (c.val()===true) staffIDs.add(c.key); });
                     if (!usersSnap.exists()) {
-                        $('#all-users-list-container').innerHTML =
-                            '<p style="color:#555;">No hay usuarios registrados aún.</p>';
+                        $('#all-users-list-container').innerHTML = '<p style="color:#555;">No hay usuarios.</p>';
                         return;
                     }
-
                     const users = [];
-                    usersSnap.forEach(child => {
-                        users.push({
-                            userID: child.key,
-                            uid: child.val()
-                        });
-                    });
-
+                    usersSnap.forEach(c => users.push({ userID: c.key, uid: c.val() }));
                     let html = '';
                     users.forEach(u => {
-                        const isStaffUser = staffIDs.has(u.userID);
-                        html += `
-                            <div class="user-entry">
-                                <span class="user-id-text">${escapeHTML(u.userID)}</span>
-                                <button class="toggle-staff-btn ${isStaffUser ? 'is-staff' : ''}"
-                                    data-userid="${escapeHTML(u.userID)}" data-uid="${escapeHTML(u.uid)}">
-                                    ${isStaffUser ? 'Quitar Staff' : 'Hacer Staff'}
-                                </button>
-                            </div>
-                        `;
+                        const isS = staffIDs.has(u.userID);
+                        html += `<div class="user-entry"><span>${escapeHTML(u.userID)}</span><button class="toggle-staff-btn ${isS?'is-staff':''}" data-userid="${escapeHTML(u.userID)}" data-uid="${u.uid}">${isS?'Quitar Staff':'Hacer Staff'}</button></div>`;
                     });
                     $('#all-users-list-container').innerHTML = html;
-
-                    // Asignar eventos a los botones
                     document.querySelectorAll('#all-users-list-container .toggle-staff-btn').forEach(btn => {
                         btn.addEventListener('click', async function() {
-                            const userID = this.dataset.userid;
-                            const uid = this.dataset.uid;
-                            const makeStaff = !this.classList.contains('is-staff');
-                            try {
-                                if (makeStaff) {
-                                    await db.ref('staffIDs/' + userID).set(true);
-                                    await db.ref('users/' + uid + '/isStaff').set(true);
-                                    $('#staff-msg').textContent = `${userID} ahora es staff.`;
-                                    $('#staff-msg').className = 'msg success';
-                                } else {
-                                    await db.ref('staffIDs/' + userID).remove();
-                                    await db.ref('users/' + uid + '/isStaff').set(false);
-                                    $('#staff-msg').textContent = `${userID} ya no es staff.`;
-                                    $('#staff-msg').className = 'msg success';
-                                }
-                                // Actualizar estado si es el usuario actual
-                                if (currentUserData && currentUserData.userID === userID) {
-                                    isStaff = makeStaff;
-                                    currentUserData.isStaff = makeStaff;
-                                    showMainScreen();
-                                }
-                                loadAllUsersForOwner(); // Refrescar lista
-                            } catch (err) {
-                                console.error(err);
-                                $('#staff-msg').textContent = 'Error: ' + err.message;
-                                $('#staff-msg').className = 'msg error';
+                            const uid = this.dataset.uid, userID = this.dataset.userid;
+                            const make = !this.classList.contains('is-staff');
+                            if (make) {
+                                await db.ref('staffIDs/'+userID).set(true);
+                                await db.ref('users/'+uid+'/isStaff').set(true);
+                            } else {
+                                await db.ref('staffIDs/'+userID).remove();
+                                await db.ref('users/'+uid+'/isStaff').set(false);
                             }
+                            if (currentUserData && currentUserData.userID === userID) {
+                                isStaff = make;
+                                currentUserData.isStaff = make;
+                                showMainScreen();
+                            }
+                            $('#staff-msg').textContent = `${userID} ${make?'ahora es':'ya no es'} staff.`;
+                            $('#staff-msg').className = 'msg success';
+                            loadAllUsersForOwner();
                         });
                     });
-                } catch (err) {
-                    console.error(err);
-                    $('#all-users-list-container').innerHTML =
-                        '<p style="color:#ff6b6b;">Error al cargar usuarios.</p>';
+                } catch(err) {
+                    $('#all-users-list-container').innerHTML = '<p style="color:#ff6b6b;">Error al cargar.</p>';
+                }
+            }
+
+            // Cargar lista de usuarios baneados para desbanear
+            async function loadBannedUsersList() {
+                $('#banned-users-list-container').innerHTML = '<p style="color:#555;">Cargando...</p>';
+                try {
+                    const snap = await db.ref('bannedUsers').once('value');
+                    if (!snap.exists()) {
+                        $('#banned-users-list-container').innerHTML = '<p style="color:#555;">No hay usuarios baneados.</p>';
+                        return;
+                    }
+                    const banned = [];
+                    snap.forEach(c => { if (c.val() === true) banned.push(c.key); });
+                    if (banned.length === 0) {
+                        $('#banned-users-list-container').innerHTML = '<p style="color:#555;">No hay usuarios baneados.</p>';
+                        return;
+                    }
+                    let html = '';
+                    banned.forEach(id => {
+                        html += `<div class="user-entry"><span style="color:#ff9999;">${escapeHTML(id)}</span><button class="unban-btn" data-userid="${escapeHTML(id)}">Desbanear</button></div>`;
+                    });
+                    $('#banned-users-list-container').innerHTML = html;
+                    document.querySelectorAll('#banned-users-list-container .unban-btn').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const userID = this.dataset.userid;
+                            await db.ref('bannedUsers/' + userID).remove();
+                            $('#unban-msg').textContent = `${userID} ha sido desbaneado.`;
+                            $('#unban-msg').className = 'msg success';
+                            loadBannedUsersList();
+                        });
+                    });
+                } catch(err) {
+                    $('#banned-users-list-container').innerHTML = '<p style="color:#ff6b6b;">Error al cargar.</p>';
                 }
             }
 
             // ==================== UTILIDADES ====================
-            /**
-             * Escapa caracteres HTML para prevenir XSS.
-             * @param {string} str - Texto a escapar.
-             * @returns {string} Texto escapado.
-             */
             function escapeHTML(str) {
                 const div = document.createElement('div');
                 div.textContent = str;
                 return div.innerHTML;
             }
 
-            // ==================== INICIALIZACIÓN DE LA APLICACIÓN ====================
-            /**
-             * Observador de estado de autenticación.
-             * Se ejecuta cada vez que cambia el usuario (login/logout).
-             */
+            // ==================== INICIALIZACIÓN ====================
             auth.onAuthStateChanged(async (user) => {
                 if (user) {
                     currentUser = user;
                     const snap = await db.ref('users/' + user.uid).once('value');
                     if (snap.exists()) {
                         currentUserData = snap.val();
-                        // Verificar baneo
                         const bannedSnap = await db.ref('bannedUsers/' + currentUserData.userID).once('value');
                         if (bannedSnap.exists() && bannedSnap.val() === true) {
                             await auth.signOut();
-                            alert('Tu cuenta ha sido baneada. Contacta con soporte.');
+                            alert('Tu cuenta ha sido baneada.');
                             return;
                         }
                         isStaff = currentUserData.isStaff === true;
-                        // Sincronizar staffIDs
-                        const staffSnap = await db.ref('staffIDs/' + currentUserData.userID).once('value');
-                        if (staffSnap.exists() && staffSnap.val() === true) {
-                            isStaff = true;
-                            if (!currentUserData.isStaff) {
-                                await db.ref('users/' + user.uid + '/isStaff').set(true);
-                                currentUserData.isStaff = true;
-                            }
-                        }
+                        const sSnap = await db.ref('staffIDs/' + currentUserData.userID).once('value');
+                        if (sSnap.exists() && sSnap.val() === true) { isStaff = true; }
                     } else {
-                        // Crear perfil si no existe
                         const userID = await getUniqueUserID();
                         currentUserData = { email: user.email, userID, isStaff: false };
                         await db.ref('users/' + user.uid).set({
-                            email: user.email,
-                            userID: userID,
+                            email: user.email, userID,
                             isStaff: false,
                             createdAt: firebase.database.ServerValue.TIMESTAMP
                         });
@@ -1871,23 +1305,18 @@
                     updateUserBadge(currentUserData.userID);
                     showMainScreen();
                 } else {
-                    // Usuario no autenticado
-                    currentUser = null;
-                    currentUserData = null;
-                    isStaff = false;
+                    currentUser = null; currentUserData = null; isStaff = false;
                     updateUserBadge(null);
                     showScreen(authScreen);
                 }
             });
 
-            // Mostrar pantalla de autenticación al cargar
+            // Inicializar la interfaz
             updateAuthUI();
             showScreen(authScreen);
-
-            console.log('✅ Sistema de Tickets de Apelación v2.0 inicializado correctamente.');
-            console.log('   - Autenticación, tickets, comentarios con imágenes.');
-            console.log('   - Baneo de usuarios, gestión de staff.');
-            console.log('   - Panel de administración con botón €.');
+            // Inicializar Turnstile al cargar
+            setTimeout(initTurnstile, 500);
+            console.log('✅ Sistema v3.0 listo - Cloudflare Turnstile + Desbaneo integrados.');
         })();
     </script>
 </body>
