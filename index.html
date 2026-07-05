@@ -1187,7 +1187,13 @@
                     }
                     const tickets = [];
                     snap.forEach(child => {
-                        const t = { key: child.key, ...child.val() };
+                        const data = child.val() || {};
+                        // Asegurar que tenga la propiedad 'estado', si no existe se asigna 'abierto'
+                        const t = {
+                            key: child.key,
+                            ...data,
+                            estado: data.estado || 'abierto'
+                        };
                         if (!filterUserId || t.userId === filterUserId) {
                             tickets.push(t);
                         }
@@ -1296,6 +1302,8 @@
                     return;
                 }
                 currentTicketData = snap.val();
+                // Asegurar estado por si acaso
+                if (!currentTicketData.estado) currentTicketData.estado = 'abierto';
                 currentTicketId = ticketKey;
 
                 ticketViewTitle.textContent = 'Ticket-' + currentTicketData.ticketNumber;
@@ -1624,9 +1632,7 @@
             }
 
             init();
-            console.log('✅ Sistema de Tickets de Apelación actualizado.');
-            console.log('   - Verificación de sesión añadida antes de cargar tickets.');
-            console.log('   - Mensajes de error más descriptivos.');
+            console.log('✅ Sistema de Tickets de Apelación actualizado - corrección de estado de tickets.');
         })();
     </script>
 </body>
