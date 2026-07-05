@@ -953,7 +953,7 @@
             let authMode = 'login';
             let ownerAuthenticated = false;
             let commentsListener = null;
-            let currentListMode = 'all'; // 'all' | 'mine'
+            let currentListMode = 'all';
 
             function showScreen(screen) {
                 [authScreen, mainScreen, ticketFormScreen, ticketViewScreen, ticketsListScreen].forEach(s => s
@@ -1136,6 +1136,10 @@
             });
 
             myTicketsBtn.addEventListener('click', () => {
+                if (!currentUser) {
+                    alert('Debes iniciar sesión para ver tus tickets.');
+                    return;
+                }
                 currentListMode = 'mine';
                 ticketsListTitle.textContent = 'Mis Tickets';
                 loadFilteredTickets(currentUser.uid);
@@ -1143,6 +1147,10 @@
             });
 
             staffTicketsBtn.addEventListener('click', () => {
+                if (!currentUser || !isStaff) {
+                    alert('Acceso denegado.');
+                    return;
+                }
                 currentListMode = 'all';
                 ticketsListTitle.textContent = 'Todos los Tickets';
                 loadFilteredTickets(null);
@@ -1171,7 +1179,6 @@
             async function loadFilteredTickets(filterUserId) {
                 ticketsListContainer.innerHTML = '<p class="empty-state">Cargando tickets...</p>';
                 try {
-                    // Se eliminó orderByChild para evitar requerir índice en Firebase
                     const snap = await db.ref('tickets').once('value');
                     if (!snap.exists()) {
                         ticketsListContainer.innerHTML =
@@ -1185,7 +1192,6 @@
                             tickets.push(t);
                         }
                     });
-                    // Ordenar manualmente por número de ticket descendente
                     tickets.sort((a, b) => b.ticketNumber - a.ticketNumber);
 
                     if (tickets.length === 0) {
@@ -1216,9 +1222,14 @@
                         });
                     });
                 } catch (err) {
-                    console.error(err);
-                    ticketsListContainer.innerHTML =
-                        '<p class="empty-state">Error al cargar tickets. Intenta de nuevo.</p>';
+                    console.error('Error al cargar tickets:', err);
+                    let mensaje = 'Error al cargar tickets. ';
+                    if (err.code === 'PERMISSION_DENIED') {
+                        mensaje += 'Permiso denegado. Es posible que las reglas de seguridad de Firebase no permitan la lectura.';
+                    } else {
+                        mensaje += 'Intenta de nuevo. (' + err.message + ')';
+                    }
+                    ticketsListContainer.innerHTML = `<p class="empty-state">${mensaje}</p>`;
                 }
             }
 
@@ -1522,7 +1533,7 @@
                             const uid = this.dataset.uid;
                             const makeStaff = !this.classList.contains('is-staff');
                             await toggleStaffStatus(userID, uid, makeStaff);
-                            loadAllUsersForOwner(); // refrescar lista
+                            loadAllUsersForOwner();
                         });
                     });
                 } catch (err) {
@@ -1545,7 +1556,6 @@
                         staffMsg.textContent = `${userID} ya no es staff.`;
                         staffMsg.className = 'msg success';
                     }
-                    // Actualizar el estado del usuario actual si coincide
                     if (currentUserData && currentUserData.userID === userID) {
                         isStaff = makeStaff;
                         currentUserData.isStaff = makeStaff;
@@ -1615,8 +1625,8 @@
 
             init();
             console.log('✅ Sistema de Tickets de Apelación actualizado.');
-            console.log('   - Botón "Mis tickets" añadido.');
-            console.log('   - Panel Owner ahora lista todos los IDs para gestionar staff.');
+            console.log('   - Verificación de sesión añadida antes de cargar tickets.');
+            console.log('   - Mensajes de error más descriptivos.');
         })();
     </script>
 </body>
