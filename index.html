@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Tickets - Apelaciones</title>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js">
     </script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js">
@@ -57,7 +56,6 @@
             flex-direction: column;
         }
 
-        /* Utilidades */
         .hidden {
             display: none !important;
         }
@@ -77,7 +75,6 @@
             }
         }
 
-        /* ID de usuario - siempre visible */
         #user-id-badge {
             position: fixed;
             top: 16px;
@@ -96,7 +93,6 @@
             transition: opacity 0.3s;
         }
 
-        /* Botón € oculto */
         #owner-trigger {
             position: fixed;
             bottom: 12px;
@@ -118,7 +114,6 @@
             color: #555;
         }
 
-        /* Pantallas */
         .screen {
             display: flex;
             flex-direction: column;
@@ -129,7 +124,6 @@
             padding: 40px 20px;
         }
 
-        /* Auth Screen */
         #auth-screen {
             gap: 20px;
         }
@@ -225,9 +219,8 @@
             letter-spacing: 0.03em;
         }
 
-        /* Main Screen */
         #main-screen {
-            gap: 28px;
+            gap: 24px;
         }
         #main-screen .welcome-text {
             font-size: 1.1rem;
@@ -279,7 +272,6 @@
             border-color: #666;
         }
 
-        /* Ticket Form Screen */
         #ticket-form-screen .card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -354,7 +346,6 @@
             background: #1a1a1a;
         }
 
-        /* Ticket View - pantalla completa */
         #ticket-view-screen {
             min-height: 100vh;
             width: 100%;
@@ -575,7 +566,6 @@
             border-color: #888;
         }
 
-        /* Tickets List Screen (staff) */
         #tickets-list-screen {
             padding: 40px 24px;
             gap: 16px;
@@ -625,7 +615,6 @@
             padding: 40px;
         }
 
-        /* Owner Panel */
         #owner-panel {
             position: fixed;
             top: 50%;
@@ -637,16 +626,19 @@
             border-radius: 8px;
             padding: 30px 26px;
             width: 90%;
-            max-width: 440px;
+            max-width: 480px;
             display: flex;
             flex-direction: column;
             gap: 16px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            max-height: 80vh;
+            overflow-y: auto;
         }
         #owner-panel h3 {
             font-weight: 400;
             letter-spacing: 0.05em;
-            font-size: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
         }
         #owner-panel input {
             background: var(--surface2);
@@ -685,36 +677,46 @@
             color: #aaa;
             font-size: 0.7rem;
         }
-        #owner-panel .staff-list {
+        #owner-panel .all-users-list {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            max-height: 180px;
+            max-height: 250px;
             overflow-y: auto;
             font-family: var(--mono);
             font-size: 0.78rem;
             letter-spacing: 0.04em;
         }
-        #owner-panel .staff-list .staff-entry {
+        #owner-panel .all-users-list .user-entry {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 6px 8px;
+            padding: 8px 10px;
             background: #1a1a1a;
             border-radius: 3px;
         }
-        #owner-panel .staff-list .remove-staff {
-            background: none;
-            border: none;
-            color: #ff5555;
-            cursor: pointer;
-            font-size: 0.7rem;
-            padding: 2px 6px;
-            border-radius: 2px;
-            transition: background 0.2s;
+        #owner-panel .all-users-list .user-id-text {
+            color: var(--text);
         }
-        #owner-panel .staff-list .remove-staff:hover {
-            background: #2a1515;
+        #owner-panel .all-users-list .toggle-staff-btn {
+            background: none;
+            border: 1px solid #555;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 0.65rem;
+            padding: 4px 10px;
+            border-radius: 3px;
+            letter-spacing: 0.03em;
+            transition: all 0.2s;
+        }
+        #owner-panel .all-users-list .toggle-staff-btn.is-staff {
+            border-color: #7ddf7d;
+            color: #7ddf7d;
+            background: #1a2a1a;
+        }
+        #owner-panel .all-users-list .toggle-staff-btn:hover {
+            background: #2a2a2a;
+            border-color: #888;
         }
         #owner-panel .msg {
             font-size: 0.75rem;
@@ -729,7 +731,6 @@
             color: #ff6b6b;
         }
 
-        /* Overlay */
         #overlay {
             position: fixed;
             top: 0;
@@ -740,7 +741,6 @@
             z-index: 1999;
         }
 
-        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 5px;
         }
@@ -755,7 +755,6 @@
             background: #555;
         }
 
-        /* Spinner */
         .spinner {
             width: 24px;
             height: 24px;
@@ -775,10 +774,7 @@
 <body>
 
     <div id="app">
-        <!-- ID Badge -->
         <div id="user-id-badge" class="hidden">AN-000-000-000</div>
-
-        <!-- Botón € oculto -->
         <button id="owner-trigger" title="">€</button>
 
         <!-- Auth Screen -->
@@ -799,7 +795,8 @@
         <div id="main-screen" class="screen hidden">
             <p class="welcome-text" id="welcome-text">Bienvenido</p>
             <button class="btn" id="open-ticket-btn">Abrir Ticket</button>
-            <button class="btn btn-staff hidden" id="staff-tickets-btn">📋 Tickets</button>
+            <button class="btn btn-staff" id="my-tickets-btn">Mis Tickets</button>
+            <button class="btn btn-staff hidden" id="staff-tickets-btn">📋 Todos los Tickets</button>
             <button class="btn btn-logout" id="logout-btn">Cerrar Sesión</button>
         </div>
 
@@ -818,7 +815,7 @@
             </div>
         </div>
 
-        <!-- Ticket View Screen (pantalla completa) -->
+        <!-- Ticket View Screen -->
         <div id="ticket-view-screen" class="screen hidden" style="padding:0; flex-direction:row;">
             <div class="ticket-main">
                 <button class="btn-back-tickets" id="back-to-list-btn">← Volver</button>
@@ -845,9 +842,9 @@
             </div>
         </div>
 
-        <!-- Tickets List Screen (staff) -->
+        <!-- Tickets List Screen -->
         <div id="tickets-list-screen" class="screen hidden">
-            <h2>Tickets de Apelación</h2>
+            <h2 id="tickets-list-title">Tickets</h2>
             <div id="tickets-list-container">
                 <p class="empty-state">Cargando tickets...</p>
             </div>
@@ -862,14 +859,11 @@
             <button class="btn" id="owner-login-btn">Acceder</button>
             <p class="msg" id="owner-msg"></p>
             <div id="owner-content" class="hidden">
-                <h3 style="font-size:0.85rem;">Añadir Staff (ID de usuario)</h3>
-                <input type="text" id="new-staff-id" placeholder="Ej: AN-620-929-829">
-                <button class="btn" id="add-staff-btn">Añadir como Staff</button>
-                <p class="msg" id="staff-msg"></p>
-                <h3 style="font-size:0.85rem;">Staffs actuales</h3>
-                <div class="staff-list" id="staff-list-container">
-                    <p style="color:#555;">Cargando...</p>
+                <h3 style="font-size:0.85rem;">Todos los usuarios registrados</h3>
+                <div class="all-users-list" id="all-users-list-container">
+                    <p style="color:#555;">Cargando usuarios...</p>
                 </div>
+                <p class="msg" id="staff-msg"></p>
             </div>
             <button class="btn btn-close" id="owner-close-btn">Cerrar</button>
         </div>
@@ -877,7 +871,6 @@
 
     <script>
         (function() {
-            // ==================== CONFIGURACIÓN FIREBASE ====================
             const firebaseConfig = {
                 apiKey: "AIzaSyD13N4-9MjTrmlPwGP7mves0Exje4v2ACw",
                 authDomain: "kahoot-8529e.firebaseapp.com",
@@ -893,7 +886,6 @@
             const auth = firebase.auth();
             const db = firebase.database();
 
-            // ==================== ELEMENTOS DOM ====================
             const $ = (sel) => document.querySelector(sel);
             const $$ = (sel) => document.querySelectorAll(sel);
 
@@ -918,6 +910,7 @@
 
             const welcomeText = $('#welcome-text');
             const openTicketBtn = $('#open-ticket-btn');
+            const myTicketsBtn = $('#my-tickets-btn');
             const staffTicketsBtn = $('#staff-tickets-btn');
             const logoutBtn = $('#logout-btn');
 
@@ -940,6 +933,7 @@
             const toggleStatusBtn = $('#toggle-status-btn');
             const backToListBtn = $('#back-to-list-btn');
 
+            const ticketsListTitle = $('#tickets-list-title');
             const ticketsListContainer = $('#tickets-list-container');
             const backToMainFromList = $('#back-to-main-from-list');
 
@@ -947,28 +941,24 @@
             const ownerLoginBtn = $('#owner-login-btn');
             const ownerMsg = $('#owner-msg');
             const ownerContent = $('#owner-content');
-            const newStaffId = $('#new-staff-id');
-            const addStaffBtn = $('#add-staff-btn');
+            const allUsersListContainer = $('#all-users-list-container');
             const staffMsg = $('#staff-msg');
-            const staffListContainer = $('#staff-list-container');
             const ownerCloseBtn = $('#owner-close-btn');
 
-            // ==================== ESTADO GLOBAL ====================
-            let currentUser = null; // Firebase Auth user
-            let currentUserData = null; // Datos de /users/{uid}
+            let currentUser = null;
+            let currentUserData = null;
             let isStaff = false;
-            let currentTicketId = null; // key del ticket en firebase
+            let currentTicketId = null;
             let currentTicketData = null;
-            let authMode = 'login'; // 'login' | 'register'
+            let authMode = 'login';
             let ownerAuthenticated = false;
             let commentsListener = null;
+            let currentListMode = 'all'; // 'all' | 'mine'
 
-            // ==================== NAVEGACIÓN ====================
             function showScreen(screen) {
                 [authScreen, mainScreen, ticketFormScreen, ticketViewScreen, ticketsListScreen].forEach(s => s
                     .classList.add('hidden'));
                 if (screen) screen.classList.remove('hidden');
-                // Ajustar ticketViewScreen
                 if (screen === ticketViewScreen) {
                     ticketViewScreen.style.display = 'flex';
                 } else if (ticketViewScreen.classList.contains('hidden')) {
@@ -985,7 +975,6 @@
                 }
             }
 
-            // ==================== GENERAR ID DE USUARIO ====================
             function generateUserID() {
                 const d1 = String(Math.floor(Math.random() * 900) + 100);
                 const d2 = String(Math.floor(Math.random() * 900) + 100);
@@ -1003,7 +992,6 @@
                     }
                     attempts++;
                 }
-                // Fallback: usar timestamp
                 const ts = Date.now().toString().slice(-9);
                 const d1 = ts.slice(0, 3);
                 const d2 = ts.slice(3, 6);
@@ -1011,7 +999,6 @@
                 return `AN-${d1}-${d2}-${d3}`;
             }
 
-            // ==================== AUTENTICACIÓN ====================
             function updateAuthUI() {
                 if (authMode === 'login') {
                     authTitle.textContent = 'Iniciar Sesión';
@@ -1073,9 +1060,8 @@
                         if (snap.exists()) {
                             currentUserData = snap.val();
                             isStaff = currentUserData.isStaff === true;
-                            // Verificar también en staffIDs
                             const staffSnap = await db.ref('staffIDs/' + currentUserData.userID).once(
-                                'value');
+                            'value');
                             if (staffSnap.exists() && staffSnap.val() === true) {
                                 isStaff = true;
                                 if (!currentUserData.isStaff) {
@@ -1084,7 +1070,6 @@
                                 }
                             }
                         } else {
-                            // Usuario existe en Auth pero no en DB, crear entrada
                             const userID = await getUniqueUserID();
                             currentUserData = { email, userID, isStaff: false };
                             await db.ref('users/' + user.uid).set({
@@ -1119,14 +1104,12 @@
                 }
             });
 
-            // Permitir Enter en campos de auth
             [authEmail, authPassword].forEach(el => {
                 el.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter') authSubmitBtn.click();
                 });
             });
 
-            // ==================== PANTALLA PRINCIPAL ====================
             function showMainScreen() {
                 showScreen(mainScreen);
                 if (currentUserData) {
@@ -1138,6 +1121,7 @@
                 } else {
                     staffTicketsBtn.classList.add('hidden');
                 }
+                myTicketsBtn.classList.remove('hidden');
             }
 
             openTicketBtn.addEventListener('click', () => {
@@ -1151,9 +1135,18 @@
                 showMainScreen();
             });
 
-            staffTicketsBtn.addEventListener('click', () => {
+            myTicketsBtn.addEventListener('click', () => {
+                currentListMode = 'mine';
+                ticketsListTitle.textContent = 'Mis Tickets';
+                loadFilteredTickets(currentUser.uid);
                 showScreen(ticketsListScreen);
-                loadTicketsList();
+            });
+
+            staffTicketsBtn.addEventListener('click', () => {
+                currentListMode = 'all';
+                ticketsListTitle.textContent = 'Todos los Tickets';
+                loadFilteredTickets(null);
+                showScreen(ticketsListScreen);
             });
 
             logoutBtn.addEventListener('click', async () => {
@@ -1175,14 +1168,66 @@
                 showMainScreen();
             });
 
-            // ==================== CREAR TICKET ====================
+            async function loadFilteredTickets(filterUserId) {
+                ticketsListContainer.innerHTML = '<p class="empty-state">Cargando tickets...</p>';
+                try {
+                    const snap = await db.ref('tickets').orderByChild('ticketNumber').once('value');
+                    if (!snap.exists()) {
+                        ticketsListContainer.innerHTML =
+                            '<p class="empty-state">No hay tickets aún.</p>';
+                        return;
+                    }
+                    const tickets = [];
+                    snap.forEach(child => {
+                        const t = { key: child.key, ...child.val() };
+                        if (!filterUserId || t.userId === filterUserId) {
+                            tickets.push(t);
+                        }
+                    });
+                    tickets.sort((a, b) => b.ticketNumber - a.ticketNumber);
+
+                    if (tickets.length === 0) {
+                        ticketsListContainer.innerHTML =
+                            '<p class="empty-state">No se encontraron tickets.</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    tickets.forEach(t => {
+                        const estadoClass = t.estado === 'abierto' ? 'status-abierto' :
+                            'status-resuelto';
+                        html += `
+                            <div class="ticket-list-item" data-ticket-key="${t.key}">
+                                <span class="ticket-id-text">Ticket-${t.ticketNumber}</span>
+                                <span class="ticket-meta">${t.userID} · <span class="status-badge ${estadoClass}" style="font-size:0.65rem;padding:3px 8px;">${t.estado.toUpperCase()}</span></span>
+                            </div>
+                        `;
+                    });
+                    ticketsListContainer.innerHTML = html;
+
+                    ticketsListContainer.querySelectorAll('.ticket-list-item').forEach(item => {
+                        item.addEventListener('click', async () => {
+                            const key = item.dataset.ticketKey;
+                            currentTicketId = key;
+                            await loadTicketView(key);
+                            showScreen(ticketViewScreen);
+                        });
+                    });
+                } catch (err) {
+                    console.error(err);
+                    ticketsListContainer.innerHTML =
+                        '<p class="empty-state">Error al cargar tickets. Intenta de nuevo.</p>';
+                }
+            }
+
             createTicketBtn.addEventListener('click', async () => {
                 const q1 = ticketQ1.value.trim();
                 const q2 = ticketQ2.value.trim();
                 const q3 = parseInt(ticketQ3.value);
 
                 if (!q1 || !q2 || isNaN(q3) || q3 < 1 || q3 > 10) {
-                    alert('Por favor, completa todos los campos correctamente. La espera debe ser un número del 1 al 10.');
+                    alert(
+                        'Por favor, completa todos los campos correctamente. La espera debe ser un número del 1 al 10.');
                     return;
                 }
 
@@ -1212,8 +1257,6 @@
                     };
 
                     await db.ref('tickets/' + ticketKey).set(ticketData);
-
-                    // Recargar la "web" - simulamos recarga mostrando el ticket creado
                     currentTicketId = ticketKey;
                     currentTicketData = ticketData;
                     await loadTicketView(ticketKey);
@@ -1227,53 +1270,7 @@
                 }
             });
 
-            // ==================== LISTA DE TICKETS (STAFF) ====================
-            async function loadTicketsList() {
-                ticketsListContainer.innerHTML = '<p class="empty-state">Cargando tickets...</p>';
-                try {
-                    const snap = await db.ref('tickets').orderByChild('ticketNumber').once('value');
-                    if (!snap.exists()) {
-                        ticketsListContainer.innerHTML =
-                            '<p class="empty-state">No hay tickets aún. Los usuarios podrán crearlos desde la página principal.</p>';
-                        return;
-                    }
-                    const tickets = [];
-                    snap.forEach(child => {
-                        tickets.push({ key: child.key, ...child.val() });
-                    });
-                    tickets.sort((a, b) => b.ticketNumber - a.ticketNumber);
-
-                    let html = '';
-                    tickets.forEach(t => {
-                        const estadoClass = t.estado === 'abierto' ? 'status-abierto' : 'status-resuelto';
-                        html += `
-                            <div class="ticket-list-item" data-ticket-key="${t.key}">
-                                <span class="ticket-id-text">Ticket-${t.ticketNumber}</span>
-                                <span class="ticket-meta">${t.userID} · <span class="status-badge ${estadoClass}" style="font-size:0.65rem;padding:3px 8px;">${t.estado.toUpperCase()}</span></span>
-                            </div>
-                        `;
-                    });
-                    ticketsListContainer.innerHTML = html;
-
-                    // Event listeners
-                    ticketsListContainer.querySelectorAll('.ticket-list-item').forEach(item => {
-                        item.addEventListener('click', async () => {
-                            const key = item.dataset.ticketKey;
-                            currentTicketId = key;
-                            await loadTicketView(key);
-                            showScreen(ticketViewScreen);
-                        });
-                    });
-                } catch (err) {
-                    console.error(err);
-                    ticketsListContainer.innerHTML =
-                        '<p class="empty-state">Error al cargar tickets. Intenta de nuevo.</p>';
-                }
-            }
-
-            // ==================== VISTA DE TICKET ====================
             async function loadTicketView(ticketKey) {
-                // Limpiar listener anterior
                 if (commentsListener) {
                     commentsListener.off();
                     commentsListener = null;
@@ -1294,7 +1291,6 @@
                 sidebarQ2.textContent = currentTicketData.pregunta2 || '-';
                 sidebarQ3.textContent = currentTicketData.pregunta3 || '-';
 
-                // Estado
                 if (currentTicketData.estado === 'resuelto') {
                     sidebarStatus.textContent = 'RESUELTO';
                     sidebarStatus.className = 'status-badge status-resuelto';
@@ -1311,16 +1307,14 @@
                     }
                 }
 
-                // Cargar comentarios
                 commentsArea.innerHTML = '<p style="color:#555;text-align:center;">Cargando comentarios...</p>';
 
-                // Listener en tiempo real para comentarios
                 const commentsRef = db.ref('tickets/' + ticketKey + '/comments');
                 commentsListener = commentsRef.on('value', (snap) => {
                     commentsArea.innerHTML = '';
                     if (!snap.exists()) {
                         commentsArea.innerHTML =
-                            '<p style="color:#555;text-align:center;padding:20px;">No hay comentarios aún. Sé el primero en comentar.</p>';
+                            '<p style="color:#555;text-align:center;padding:20px;">No hay comentarios aún.</p>';
                         return;
                     }
                     const comments = [];
@@ -1345,16 +1339,13 @@
                             </div>
                         `;
                     });
-                    // Scroll al final
                     commentsArea.scrollTop = commentsArea.scrollHeight;
                 });
 
-                // Mostrar/ocultar botón volver según si es staff
-                if (isStaff) {
+                if (isStaff || currentListMode === 'mine') {
                     backToListBtn.classList.remove('hidden');
-                    backToListBtn.textContent = '← Volver a Tickets';
+                    backToListBtn.textContent = '← Volver a la lista';
                 } else {
-                    // Usuario normal: volver al main
                     backToListBtn.classList.remove('hidden');
                     backToListBtn.textContent = '← Volver';
                 }
@@ -1367,9 +1358,12 @@
                     commentsListener.off();
                     commentsListener = null;
                 }
-                if (isStaff) {
+                if (isStaff && currentListMode === 'all') {
                     showScreen(ticketsListScreen);
-                    loadTicketsList();
+                    loadFilteredTickets(null);
+                } else if (currentListMode === 'mine') {
+                    showScreen(ticketsListScreen);
+                    loadFilteredTickets(currentUser.uid);
                 } else {
                     showMainScreen();
                 }
@@ -1397,7 +1391,6 @@
                     await db.ref('tickets/' + currentTicketId + '/updatedAt').set(firebase.database.ServerValue
                         .TIMESTAMP);
                     newCommentText.value = '';
-                    // La recarga ocurre automáticamente por el listener
                 } catch (err) {
                     console.error(err);
                     alert('Error al enviar comentario.');
@@ -1407,7 +1400,6 @@
                 }
             });
 
-            // Enviar con Enter (Shift+Enter para nueva línea)
             newCommentText.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -1423,7 +1415,6 @@
                     await db.ref('tickets/' + currentTicketId + '/updatedAt').set(firebase.database.ServerValue
                         .TIMESTAMP);
                     currentTicketData.estado = nuevoEstado;
-                    // Actualizar UI
                     if (nuevoEstado === 'resuelto') {
                         sidebarStatus.textContent = 'RESUELTO';
                         sidebarStatus.className = 'status-badge status-resuelto';
@@ -1439,7 +1430,7 @@
                 }
             });
 
-            // ==================== PANEL OWNER ====================
+            // Owner Panel
             ownerTrigger.addEventListener('click', () => {
                 ownerPanel.classList.remove('hidden');
                 overlay.classList.remove('hidden');
@@ -1470,7 +1461,7 @@
                     ownerContent.classList.remove('hidden');
                     ownerMsg.textContent = '';
                     ownerMsg.className = 'msg';
-                    loadStaffList();
+                    loadAllUsersForOwner();
                 } else {
                     ownerMsg.textContent = 'Contraseña incorrecta.';
                     ownerMsg.className = 'msg error';
@@ -1483,93 +1474,79 @@
                 if (e.key === 'Enter') ownerLoginBtn.click();
             });
 
-            async function loadStaffList() {
-                staffListContainer.innerHTML = '<p style="color:#555;">Cargando...</p>';
+            async function loadAllUsersForOwner() {
+                allUsersListContainer.innerHTML = '<p style="color:#555;">Cargando usuarios...</p>';
                 try {
-                    const snap = await db.ref('staffIDs').once('value');
-                    if (!snap.exists()) {
-                        staffListContainer.innerHTML = '<p style="color:#555;">No hay staffs registrados.</p>';
+                    const usersSnap = await db.ref('userIDs').once('value');
+                    const staffSnap = await db.ref('staffIDs').once('value');
+                    const staffIDs = new Set();
+                    if (staffSnap.exists()) {
+                        staffSnap.forEach(child => {
+                            if (child.val() === true) staffIDs.add(child.key);
+                        });
+                    }
+
+                    if (!usersSnap.exists()) {
+                        allUsersListContainer.innerHTML =
+                            '<p style="color:#555;">No hay usuarios registrados aún.</p>';
                         return;
                     }
-                    const staffIDs = [];
-                    snap.forEach(child => {
-                        if (child.val() === true) {
-                            staffIDs.push(child.key);
-                        }
+
+                    const users = [];
+                    usersSnap.forEach(child => {
+                        users.push({
+                            userID: child.key,
+                            uid: child.val()
+                        });
                     });
-                    if (staffIDs.length === 0) {
-                        staffListContainer.innerHTML = '<p style="color:#555;">No hay staffs registrados.</p>';
-                        return;
-                    }
+
                     let html = '';
-                    staffIDs.forEach(id => {
+                    users.forEach(u => {
+                        const isStaffUser = staffIDs.has(u.userID);
                         html += `
-                            <div class="staff-entry">
-                                <span>${escapeHTML(id)}</span>
-                                <button class="remove-staff" data-id="${escapeHTML(id)}">✕</button>
+                            <div class="user-entry">
+                                <span class="user-id-text">${escapeHTML(u.userID)}</span>
+                                <button class="toggle-staff-btn ${isStaffUser ? 'is-staff' : ''}" data-userid="${escapeHTML(u.userID)}" data-uid="${escapeHTML(u.uid)}">
+                                    ${isStaffUser ? 'Quitar Staff' : 'Hacer Staff'}
+                                </button>
                             </div>
                         `;
                     });
-                    staffListContainer.innerHTML = html;
+                    allUsersListContainer.innerHTML = html;
 
-                    // Event listeners para eliminar
-                    staffListContainer.querySelectorAll('.remove-staff').forEach(btn => {
-                        btn.addEventListener('click', async () => {
-                            const id = btn.dataset.id;
-                            await db.ref('staffIDs/' + id).remove();
-                            // También actualizar en users
-                            const uidSnap = await db.ref('userIDs/' + id).once('value');
-                            if (uidSnap.exists()) {
-                                await db.ref('users/' + uidSnap.val() + '/isStaff').set(false);
-                            }
-                            staffMsg.textContent = 'Staff eliminado: ' + id;
-                            staffMsg.className = 'msg success';
-                            loadStaffList();
-                            // Si el usuario actual es el eliminado, actualizar
-                            if (currentUserData && currentUserData.userID === id) {
-                                isStaff = false;
-                                currentUserData.isStaff = false;
-                                showMainScreen();
-                            }
+                    allUsersListContainer.querySelectorAll('.toggle-staff-btn').forEach(btn => {
+                        btn.addEventListener('click', async function() {
+                            const userID = this.dataset.userid;
+                            const uid = this.dataset.uid;
+                            const makeStaff = !this.classList.contains('is-staff');
+                            await toggleStaffStatus(userID, uid, makeStaff);
+                            loadAllUsersForOwner(); // refrescar lista
                         });
                     });
                 } catch (err) {
                     console.error(err);
-                    staffListContainer.innerHTML = '<p style="color:#ff6b6b;">Error al cargar staffs.</p>';
+                    allUsersListContainer.innerHTML =
+                        '<p style="color:#ff6b6b;">Error al cargar usuarios.</p>';
                 }
             }
 
-            addStaffBtn.addEventListener('click', async () => {
-                const staffID = newStaffId.value.trim();
-                if (!staffID) {
-                    staffMsg.textContent = 'Introduce un ID válido.';
-                    staffMsg.className = 'msg error';
-                    return;
-                }
-                if (!staffID.startsWith('AN-') || staffID.length !== 11) {
-                    staffMsg.textContent = 'El ID debe tener formato AN-XXX-XXX-XXX (11 caracteres).';
-                    staffMsg.className = 'msg error';
-                    return;
-                }
+            async function toggleStaffStatus(userID, uid, makeStaff) {
                 try {
-                    // Verificar que el usuario existe
-                    const uidSnap = await db.ref('userIDs/' + staffID).once('value');
-                    if (!uidSnap.exists()) {
-                        staffMsg.textContent = 'No existe ningún usuario con ese ID.';
-                        staffMsg.className = 'msg error';
-                        return;
+                    if (makeStaff) {
+                        await db.ref('staffIDs/' + userID).set(true);
+                        await db.ref('users/' + uid + '/isStaff').set(true);
+                        staffMsg.textContent = `${userID} ahora es staff.`;
+                        staffMsg.className = 'msg success';
+                    } else {
+                        await db.ref('staffIDs/' + userID).remove();
+                        await db.ref('users/' + uid + '/isStaff').set(false);
+                        staffMsg.textContent = `${userID} ya no es staff.`;
+                        staffMsg.className = 'msg success';
                     }
-                    const uid = uidSnap.val();
-                    await db.ref('staffIDs/' + staffID).set(true);
-                    await db.ref('users/' + uid + '/isStaff').set(true);
-                    staffMsg.textContent = 'Staff añadido correctamente: ' + staffID;
-                    staffMsg.className = 'msg success';
-                    newStaffId.value = '';
-                    loadStaffList();
-                    // Si es el usuario actual, actualizar
-                    if (currentUserData && currentUserData.userID === staffID) {
-                        isStaff = true;
-                        currentUserData.isStaff = true;
+                    // Actualizar el estado del usuario actual si coincide
+                    if (currentUserData && currentUserData.userID === userID) {
+                        isStaff = makeStaff;
+                        currentUserData.isStaff = makeStaff;
                         showMainScreen();
                     }
                 } catch (err) {
@@ -1577,16 +1554,14 @@
                     staffMsg.textContent = 'Error: ' + err.message;
                     staffMsg.className = 'msg error';
                 }
-            });
+            }
 
-            // ==================== UTILIDADES ====================
             function escapeHTML(str) {
                 const div = document.createElement('div');
                 div.textContent = str;
                 return div.innerHTML;
             }
 
-            // ==================== INICIALIZACIÓN ====================
             function init() {
                 showScreen(authScreen);
                 updateUserBadge(null);
@@ -1596,7 +1571,6 @@
                 ownerAuthenticated = false;
                 ownerContent.classList.add('hidden');
 
-                // Observar cambios de autenticación
                 auth.onAuthStateChanged(async (user) => {
                     if (user) {
                         currentUser = user;
@@ -1604,7 +1578,6 @@
                         if (snap.exists()) {
                             currentUserData = snap.val();
                             isStaff = currentUserData.isStaff === true;
-                            // Verificar staffIDs
                             const staffSnap = await db.ref('staffIDs/' + currentUserData.userID).once(
                                 'value');
                             if (staffSnap.exists() && staffSnap.val() === true) {
@@ -1615,7 +1588,6 @@
                                 }
                             }
                         } else {
-                            // Crear entrada si no existe
                             const userID = await getUniqueUserID();
                             currentUserData = { email: user.email, userID, isStaff: false };
                             await db.ref('users/' + user.uid).set({
@@ -1640,10 +1612,9 @@
             }
 
             init();
-            console.log('✅ Sistema de Tickets de Apelación inicializado.');
-            console.log('   Firebase configurado. Base de datos: ' + firebaseConfig.databaseURL);
-            console.log('   Panel Owner: botón "€" en la esquina inferior derecha.');
-            console.log('   Contraseña del panel: "Owner"');
+            console.log('✅ Sistema de Tickets de Apelación actualizado.');
+            console.log('   - Botón "Mis tickets" añadido.');
+            console.log('   - Panel Owner ahora lista todos los IDs para gestionar staff.');
         })();
     </script>
 </body>
